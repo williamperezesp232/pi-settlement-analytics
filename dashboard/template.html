@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PI Legal Ops · Live Case Alerts</title>
+<style>
+:root {
+  --bg:#f5f6f8; --panel:#ffffff; --sidebar:#eceff3; --text:#1d2733; --muted:#66727f; --line:#e1e5ea;
+  --accent:#e4572e; --red:#d1495b; --amber:#f4a261; --watch:#e9c46a; --ok:#b8c4cc; --teal:#2a9d8f;
+  --grid:#e8ebef;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#12161b; --panel:#1b2128; --sidebar:#161b21; --text:#e7eaee; --muted:#98a3af; --line:#2b343e;
+          --ok:#5d6975; --grid:#262e37; }
+}
+* { box-sizing:border-box; }
+html { color-scheme: light dark; }
+body { margin:0; font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       background:var(--bg); color:var(--text); }
+.app { display:grid; grid-template-columns:272px minmax(0,1fr); min-height:100vh; }
+.sidebar { background:var(--sidebar); border-right:1px solid var(--line); padding:18px 16px; position:sticky; top:0;
+           height:100vh; overflow:auto; }
+main { padding:22px 28px 48px; min-width:0; }
+@media (max-width:900px) { .app { grid-template-columns:1fr; } .sidebar { position:static; height:auto; } main { padding:16px; } }
+
+h1 { font-size:28px; margin:0 0 4px; letter-spacing:-.01em; }
+h2 { font-size:19px; margin:0 0 10px; }
+h3 { font-size:15px; margin:18px 0 8px; }
+.caption { color:var(--muted); font-size:12.5px; margin:0 0 16px; }
+.muted { color:var(--muted); }
+.small { font-size:12px; }
+
+.sidebar h2 { font-size:17px; margin:0 0 12px; }
+.field { margin-bottom:11px; }
+.field > label, .field > .lab { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
+details.ms { background:var(--panel); border:1px solid var(--line); border-radius:7px; }
+details.ms summary { list-style:none; cursor:pointer; padding:7px 10px; font-size:13px; display:flex; justify-content:space-between;
+                     align-items:center; gap:8px; }
+details.ms summary::-webkit-details-marker { display:none; }
+details.ms summary::after { content:"▾"; color:var(--muted); }
+details.ms[open] summary { border-bottom:1px solid var(--line); }
+details.ms .opts { max-height:170px; overflow:auto; padding:6px 10px; }
+details.ms .opts label { display:flex; gap:8px; align-items:center; padding:3px 0; font-size:13px; cursor:pointer; }
+.radio label { display:flex; gap:8px; align-items:center; font-size:13px; padding:2px 0; cursor:pointer; }
+select, input[type=range] { width:100%; }
+select { padding:6px 8px; border-radius:7px; border:1px solid var(--line); background:var(--panel); color:var(--text); font:inherit; }
+input[type=range] { accent-color:var(--accent); }
+.rv { float:right; color:var(--accent); font-size:12px; }
+hr { border:0; border-top:1px solid var(--line); margin:14px 0; }
+.switch { display:flex; gap:9px; align-items:flex-start; font-size:13px; cursor:pointer; }
+.btns { display:grid; grid-template-columns:1fr; gap:8px; }
+button.btn { background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:7px; padding:7px 10px;
+             font:inherit; cursor:pointer; }
+button.btn:hover { border-color:var(--accent); }
+
+.kpis { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; margin-bottom:18px; }
+@media (max-width:1150px) { .kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+.card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px 14px; }
+.kpi .label { font-size:12px; color:var(--muted); }
+.kpi .value { font-size:28px; font-weight:600; line-height:1.2; margin-top:2px; }
+.kpi .sub { display:inline-block; margin-top:4px; font-size:11.5px; color:var(--muted); background:var(--bg); padding:1px 8px; border-radius:10px; }
+
+.tabs { display:flex; gap:2px; border-bottom:1px solid var(--line); margin-bottom:16px; flex-wrap:wrap; }
+.tabs button { background:none; border:0; padding:9px 14px; cursor:pointer; color:var(--muted); font:inherit;
+               border-bottom:2px solid transparent; margin-bottom:-1px; }
+.tabs button[aria-selected=true] { color:var(--text); font-weight:600; border-bottom-color:var(--accent); }
+
+.dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:baseline; }
+.dot.RED { background:var(--red); } .dot.AMBER { background:var(--amber); } .dot.WATCH { background:var(--watch); }
+.dot.ON-TRACK { background:#4caf7d; }
+
+.tablewrap { overflow:auto; border:1px solid var(--line); border-radius:10px; background:var(--panel); max-height:440px; }
+table { border-collapse:collapse; width:100%; font-size:12.5px; }
+th { position:sticky; top:0; background:var(--panel); text-align:left; color:var(--muted); font-weight:600; padding:8px 10px;
+     border-bottom:1px solid var(--line); white-space:nowrap; z-index:1; }
+td { padding:7px 10px; border-bottom:1px solid var(--line); white-space:nowrap; }
+td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
+tbody tr { cursor:pointer; }
+tbody tr:hover { background:color-mix(in srgb, var(--accent) 7%, transparent); }
+tbody tr.sel { background:color-mix(in srgb, var(--accent) 16%, transparent); }
+tbody tr:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
+.bar { display:inline-block; width:64px; height:7px; background:var(--line); border-radius:4px; vertical-align:middle; margin-right:6px; overflow:hidden; }
+.bar i { display:block; height:100%; background:var(--accent); }
+table.static tbody tr { cursor:default; } table.static tbody tr:hover { background:none; }
+.toolbar { display:flex; justify-content:space-between; align-items:center; gap:12px; margin:8px 0 0; }
+
+.detail { margin-top:22px; padding-top:18px; border-top:1px solid var(--line); }
+.detail-grid { display:grid; grid-template-columns:minmax(150px,1fr) minmax(190px,1fr) minmax(300px,2fr); gap:20px; align-items:start; }
+@media (max-width:1100px) { .detail-grid { grid-template-columns:1fr 1fr; } .detail-grid .chartcol { grid-column:1 / -1; } }
+.metric { margin-bottom:14px; } .metric .label { font-size:12px; color:var(--muted); }
+.metric .value { font-size:28px; font-weight:500; line-height:1.15; }
+.chip { display:inline-block; font-size:11.5px; color:var(--muted); background:var(--panel); border:1px solid var(--line); padding:0 8px; border-radius:10px; }
+.callout { margin-top:14px; padding:12px 14px; border-radius:8px; border:1px solid var(--line); border-left-width:5px; background:var(--panel); }
+.callout.RED { border-left-color:var(--red); } .callout.AMBER { border-left-color:var(--amber); }
+.callout.WATCH { border-left-color:var(--watch); } .callout.ON-TRACK { border-left-color:#4caf7d; }
+
+svg { display:block; width:100%; height:auto; overflow:visible; }
+svg text { fill:var(--muted); font:11px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+svg text.strong { fill:var(--text); font-weight:600; }
+.legend { display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--muted); margin:6px 0 2px; }
+.legend span::before { content:""; display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; background:var(--c); }
+.two { display:grid; grid-template-columns:1fr 1fr; gap:22px; }
+@media (max-width:1100px) { .two { grid-template-columns:1fr; } }
+#tooltip { position:fixed; z-index:50; pointer-events:none; background:#1d2733; color:#fff; padding:7px 10px; border-radius:6px;
+           font-size:12px; line-height:1.4; max-width:280px; opacity:0; transition:opacity .08s; box-shadow:0 4px 14px rgba(0,0,0,.25); }
+.note { font-size:12px; color:var(--muted); margin-top:26px; }
+.warn { background:#fff4e5; color:#7a4b00; border:1px solid #f0c987; border-radius:8px; padding:10px 12px; margin-bottom:14px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar" aria-label="Filters"></aside>
+  <main>
+    <h1>⚖️ PI Legal Ops: Live Case Alerts</h1>
+    <p class="caption" id="caption"></p>
+    <div id="warn"></div>
+    <section class="kpis" id="kpis"></section>
+    <nav class="tabs" id="tabs" role="tablist"></nav>
+
+    <section id="tab-queue" role="tabpanel"></section>
+    <section id="tab-map" role="tabpanel" hidden></section>
+    <section id="tab-owners" role="tabpanel" hidden></section>
+    <section id="tab-method" role="tabpanel" hidden></section>
+
+    <p class="note" id="footnote"></p>
+  </main>
+</div>
+<div id="tooltip" role="tooltip"></div>
+
+<script>
+const D = /*__DATA__*/null;   // <- datos de PostgreSQL inyectados por python/03_build_dashboard.py
+(function () {
+"use strict";
+if (!D) { document.body.innerHTML = "<p style='padding:24px'>This file is a template. Run <code>python python/03_build_dashboard.py</code> to build <code>dashboard/index.html</code>.</p>"; return; }
+
+/* ───────────────────────── constantes ───────────────────────── */
+const LEVELS = ["RED", "AMBER", "WATCH", "ON TRACK"];
+const LCOLOR = { "RED": "var(--red)", "AMBER": "var(--amber)", "WATCH": "var(--watch)", "ON TRACK": "var(--ok)" };
+const lcls = l => l.replace(" ", "-");
+const PHASES = [["treatment", "Treatment", "Clinical"], ["records_wait", "Records Wait", "External"],
+  ["demand_prep", "Demand Prep", "Controllable"], ["offer_wait", "Adjuster Offer Wait", "External"],
+  ["negotiation", "Strategic Negotiation", "Strategic"], ["release_execution", "Release Execution", "Controllable"],
+  ["carrier_check_wait", "Carrier Check Wait", "External"], ["reductions_blocking", "Reductions Blocking", "External"],
+  ["disbursement_prep", "Disbursement Prep", "Controllable"]];
+const PNAMES = PHASES.map(p => p[1]);
+const ACTIONS = {
+  treatment: "Check in with the client and providers; confirm the expected discharge / MMI date.",
+  records_wait: "Escalate outstanding record and billing requests provider by provider.",
+  demand_prep: "Prioritize the demand package; review the case manager's workload.",
+  offer_wait: "Follow up with the adjuster; escalate to the carrier's supervisor if past the window.",
+  negotiation: "Review strategy with the attorney: counter, mediation, or evaluate filing suit.",
+  release_execution: "Call the client to complete signing / notarization; resend the release today.",
+  carrier_check_wait: "Confirm the carrier received the signed release and get a check issue date.",
+  reductions_blocking: "The check is in hand: escalate pending reductions with billing departments and lienholders.",
+  disbursement_prep: "Finalize the closing statement and issue the client's payment."
+};
+const SORTS = ["Money at stake", "Severity, then money", "Days over threshold"];
+const BASIS = ["All", "Accepted settlement only", "Estimated only"];
+const DIMS = [["manager", "Case manager", r => r.case_manager], ["carrier", "Insurance carrier", r => r.insurance_company],
+  ["injury", "Injury type", r => r.injury_type], ["stage", "Case stage", r => r.case_stage],
+  ["phase", "Current phase", r => r.phase_name], ["level", "Alert level", r => r.level]];
+const P = D.params;
+
+/* ───────────────────────── utilidades ───────────────────────── */
+const $ = (s, root = document) => root.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const usd = x => Math.abs(x) >= 1e6 ? "$" + (x / 1e6).toFixed(1) + "M" : Math.abs(x) >= 1e3 ? "$" + Math.round(x / 1e3) + "K" : "$" + Math.round(x).toLocaleString("en-US");
+const usd2 = x => "$" + (x / 1e6).toFixed(2) + "M";
+const pct0 = x => Math.round(x * 100) + "%";
+const spct = x => (x >= 0 ? "+" : "") + Math.round(x * 100) + "%";
+const fdate = iso => new Date(iso + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
+const shortFlag = f => ({ "SLOWER than firm": "Slower", "FASTER than firm": "Faster", "In line": "In line" }[f] || "n/a");
+const dot = l => `<span class="dot ${lcls(l)}"></span>`;
+const sum = (a, f) => a.reduce((t, x) => t + f(x), 0);
+function niceTicks(max, n = 5) {
+  const step0 = max / n, mag = Math.pow(10, Math.floor(Math.log10(step0))), norm = step0 / mag;
+  const step = (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10) * mag, out = [];
+  for (let v = 0; v <= max + 1e-9; v += step) out.push(v);
+  return out;
+}
+
+/* ───────────────────────── estado ───────────────────────── */
+const freshState = () => ({
+  sel: { manager: new Set(), carrier: new Set(), injury: new Set(), stage: new Set(), phase: new Set(), level: new Set() },
+  basis: BASIS[0], minMoney: 0, sort: SORTS[0], custom: false, scale: 100,
+  watch: Math.round(P.watch * 100), red: P.red
+});
+let S = Object.assign(freshState(), { tab: "queue", selected: null });
+const maxMoneyK = Math.floor(Math.max(...D.alerts.map(a => a.money_at_stake)) / 1000) + 1;
+
+/* ───────────────────────── lógica de alertas (misma regla que pi.v_open_case_alerts) ───────────────────────── */
+function classify() {
+  const scale = S.custom ? S.scale / 100 : 1, watch = S.custom ? S.watch / 100 : P.watch, red = S.custom ? S.red : P.red;
+  return D.alerts.map(r => {
+    const thr = r.threshold_days * scale, d = r.days_in_current_phase;
+    const level = d > thr * red ? "RED" : d > thr ? "AMBER" : d >= thr * watch ? "WATCH" : "ON TRACK";
+    return Object.assign({}, r, { thr, pct: d / thr * 100, over: Math.max(0, d - thr), level, flagged: level !== "ON TRACK" });
+  });
+}
+function applyFilters(rows) {
+  return rows.filter(r => {
+    for (const [k, , get] of DIMS) { const s = S.sel[k]; if (s.size && !s.has(get(r))) return false; }
+    if (S.basis === BASIS[1] && r.amount_basis !== "Actual settlement") return false;
+    if (S.basis === BASIS[2] && r.amount_basis === "Actual settlement") return false;
+    return r.money_at_stake >= S.minMoney * 1000;
+  });
+}
+function sortRows(rows) {
+  const sev = l => LEVELS.indexOf(l), byId = (a, b) => a.case_id.localeCompare(b.case_id);
+  const f = S.sort === SORTS[1] ? (a, b) => sev(a.level) - sev(b.level) || b.money_at_stake - a.money_at_stake || byId(a, b)
+          : S.sort === SORTS[2] ? (a, b) => b.over - a.over || b.money_at_stake - a.money_at_stake || byId(a, b)
+          : (a, b) => b.money_at_stake - a.money_at_stake || b.over - a.over || byId(a, b);
+  return rows.slice().sort(f);
+}
+
+/* ───────────────────────── barra lateral ───────────────────────── */
+function buildSidebar() {
+  const sb = $("#sidebar");
+  let h = "<h2>Filters</h2>";
+  for (const [k, label, get] of DIMS) {
+    const opts = k === "level" ? LEVELS : k === "phase" ? PNAMES : [...new Set(D.alerts.map(get))].sort();
+    h += `<div class="field"><span class="lab">${label}</span><details class="ms" data-k="${k}"><summary><span class="sv">All</span></summary><div class="opts">` +
+         opts.map(o => `<label><input type="checkbox" value="${esc(o)}">${k === "level" ? dot(o) : ""}${esc(o)}</label>`).join("") + "</div></details></div>";
+  }
+  h += `<div class="field radio"><span class="lab">Amount type</span>` +
+       BASIS.map((b, i) => `<label><input type="radio" name="basis" value="${i}"> ${b}</label>`).join("") + "</div>";
+  h += `<div class="field"><label for="minmoney">Min. money at stake ($K) <span class="rv" id="mmv">0</span></label>
+        <input type="range" id="minmoney" min="0" max="${maxMoneyK}" step="25" value="0"></div>`;
+  h += `<div class="field"><label for="sort">Sort queue by</label><select id="sort">${SORTS.map(s => `<option>${s}</option>`).join("")}</select></div><hr>`;
+  h += `<label class="switch"><input type="checkbox" id="custom"><span>What-if: customize alert thresholds<br><span class="muted small">Recalculates alerts in this page only; the database is not modified.</span></span></label>
+        <div id="whatif" hidden style="margin-top:12px">
+          <div class="field"><label for="scale">Scale all thresholds (%) <span class="rv" id="scv"></span></label><input type="range" id="scale" min="50" max="200" step="5"></div>
+          <div class="field"><label for="watch">WATCH starts at (% of threshold) <span class="rv" id="wav"></span></label><input type="range" id="watch" min="50" max="95" step="5"></div>
+          <div class="field"><label for="red">RED starts at (× threshold) <span class="rv" id="rdv"></span></label><input type="range" id="red" min="1.1" max="3" step="0.1"></div>
+        </div><hr>
+        <div class="btns"><button class="btn" id="reset">↺ Reset filters</button></div>`;
+  sb.innerHTML = h;
+
+  sb.addEventListener("change", e => {
+    const t = e.target;
+    const det = t.closest("details.ms");
+    if (det && t.type === "checkbox") { const set = S.sel[det.dataset.k]; t.checked ? set.add(t.value) : set.delete(t.value); }
+    else if (t.name === "basis") S.basis = BASIS[+t.value];
+    else if (t.id === "sort") S.sort = t.value;
+    else if (t.id === "custom") S.custom = t.checked;
+    syncSidebar(); update();
+  });
+  sb.addEventListener("input", e => {
+    const t = e.target;
+    if (t.id === "minmoney") S.minMoney = +t.value;
+    else if (t.id === "scale") S.scale = +t.value;
+    else if (t.id === "watch") S.watch = +t.value;
+    else if (t.id === "red") S.red = +t.value;
+    else return;
+    syncSidebar(); update();
+  });
+  $("#reset").addEventListener("click", () => { S = Object.assign(freshState(), { tab: S.tab, selected: S.selected }); syncSidebar(); update(); });
+}
+function syncSidebar() {
+  for (const d of document.querySelectorAll("details.ms")) {
+    const set = S.sel[d.dataset.k];
+    d.querySelectorAll("input").forEach(i => { i.checked = set.has(i.value); });
+    $(".sv", d).textContent = set.size ? set.size + " selected" : "All";
+  }
+  document.querySelectorAll("input[name=basis]").forEach(i => { i.checked = BASIS[+i.value] === S.basis; });
+  $("#minmoney").value = S.minMoney; $("#mmv").textContent = S.minMoney;
+  $("#sort").value = S.sort; $("#custom").checked = S.custom; $("#whatif").hidden = !S.custom;
+  $("#scale").value = S.scale; $("#scv").textContent = S.scale;
+  $("#watch").value = S.watch; $("#wav").textContent = S.watch;
+  $("#red").value = S.red; $("#rdv").textContent = (+S.red).toFixed(1);
+}
+
+/* ───────────────────────── gráficos SVG ───────────────────────── */
+function phaseChart(c, det) {
+  const med = Object.fromEntries(D.phase_summary.map(p => [p.phase_key, p.median_days]));
+  const rows = PHASES.map(([k, name]) => {
+    let days = null, status = "Not reached";
+    if (k === c.current_phase) { days = c.days_in_current_phase; status = "In progress"; }
+    else if (det && det[k + "_days"] != null) { days = det[k + "_days"]; status = "Completed"; }
+    return { k, name, days, status, median: med[k] };
+  });
+  const W = 640, rh = 29, L = 142, R = 18, T = 6, B = 40, H = T + rows.length * rh + B;
+  const maxV = Math.max(...rows.map(r => Math.max(r.days || 0, r.median || 0)), c.thr) * 1.06;
+  const x = v => L + (W - L - R) * v / maxV;
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Days per phase for ${esc(c.case_id)} versus firm median">`;
+  for (const t of niceTicks(maxV)) s += `<line x1="${x(t)}" x2="${x(t)}" y1="${T}" y2="${T + rows.length * rh}" stroke="var(--grid)"/>` +
+      `<text x="${x(t)}" y="${T + rows.length * rh + 14}" text-anchor="middle">${t}</text>`;
+  s += `<text x="${(L + W - R) / 2}" y="${H - 6}" text-anchor="middle">Days</text>`;
+  rows.forEach((r, i) => {
+    const y = T + i * rh, cy = y + rh / 2;
+    s += `<text x="${L - 8}" y="${cy + 4}" text-anchor="end" class="${r.k === c.current_phase ? "strong" : ""}">${esc(r.name)}</text>`;
+    if (r.days != null) {
+      const col = r.status === "In progress" ? LCOLOR[c.level] : "var(--teal)";
+      s += `<rect x="${L}" y="${y + 6}" width="${Math.max(1, x(r.days) - L)}" height="${rh - 12}" rx="2" fill="${col}" data-tip="${esc(r.name + "\n" + r.status + ": " + r.days + " days\nFirm median: " + r.median.toFixed(1) + " days")}"/>`;
+    }
+    s += `<line x1="${x(r.median)}" x2="${x(r.median)}" y1="${y + 3}" y2="${y + rh - 3}" stroke="var(--text)" stroke-width="2.4" data-tip="${esc(r.name + "\nFirm median: " + r.median.toFixed(1) + " days")}"/>`;
+    if (r.k === c.current_phase) s += `<path d="M${x(c.thr)} ${cy - 7} l6 7 l-6 7 l-6 -7 z" fill="var(--text)" data-tip="${esc("Alert threshold: " + c.thr.toFixed(0) + " days")}"/>`;
+  });
+  return s + "</svg>" + `<div class="legend"><span style="--c:var(--teal)">Completed</span><span style="--c:${LCOLOR[c.level]}">In progress</span></div>` +
+    `<div class="small muted">Bars = this case · vertical tick = firm median (closed cases) · ◆ = alert threshold of the current phase</div>`;
+}
+
+function riskMap(rows) {
+  const W = 920, H = 400, L = 62, R = 24, T = 26, B = 52;
+  const watch = S.custom ? S.watch : P.watch * 100, red = S.custom ? S.red * 100 : P.red * 100;
+  const xmax = Math.max(150, Math.ceil(Math.max(...rows.map(r => r.pct)) / 10) * 10 * 1.05);
+  const ymax = Math.max(...rows.map(r => r.money_at_stake / 1000)) * 1.12;
+  const x = v => L + (W - L - R) * v / xmax, y = v => T + (H - T - B) * (1 - v / ymax);
+  const mmax = Math.max(...rows.map(r => r.money_at_stake));
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Money at stake versus share of alert threshold used">`;
+  for (const t of niceTicks(ymax)) s += `<line x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}" stroke="var(--grid)"/><text x="${L - 8}" y="${y(t) + 4}" text-anchor="end">${t}</text>`;
+  for (const t of niceTicks(xmax, 8)) s += `<line x1="${x(t)}" x2="${x(t)}" y1="${T}" y2="${H - B}" stroke="var(--grid)"/><text x="${x(t)}" y="${H - B + 15}" text-anchor="middle">${t}</text>`;
+  s += `<text x="${(L + W - R) / 2}" y="${H - 8}" text-anchor="middle">% of alert threshold used (days in phase ÷ threshold)</text>`;
+  s += `<text transform="translate(14 ${(T + H - B) / 2}) rotate(-90)" text-anchor="middle">Money at stake ($K)</text>`;
+  for (const [v, lab] of [[watch, "WATCH"], [100, "AMBER"], [red, "RED"]])
+    s += `<line x1="${x(v)}" x2="${x(v)}" y1="${T - 6}" y2="${H - B}" stroke="var(--muted)" stroke-dasharray="5 4"/><text x="${x(v) + 4}" y="${T + 4}">${lab}</text>`;
+  const order = rows.slice().sort((a, b) => LEVELS.indexOf(b.level) - LEVELS.indexOf(a.level));   // las alertas se dibujan encima
+  for (const r of order) {
+    const rad = 5 + 15 * Math.sqrt(r.money_at_stake / mmax);
+    s += `<circle cx="${x(r.pct)}" cy="${y(r.money_at_stake / 1000)}" r="${rad.toFixed(1)}" fill="${LCOLOR[r.level]}" fill-opacity=".85" stroke="var(--panel)" stroke-width="1.2" data-id="${esc(r.case_id)}" ` +
+         `data-tip="${esc(r.case_id + " · " + r.level + "\n" + r.case_manager + " · " + r.insurance_company + "\n" + r.phase_name + ": " + r.days_in_current_phase + " d (" + Math.round(r.pct) + "% of " + r.thr.toFixed(0) + " d)\nAt stake: " + usd(r.money_at_stake))}"/>`;
+  }
+  s += "</svg>" + `<div class="legend">${LEVELS.map(l => `<span style="--c:${LCOLOR[l]}">${l}</span>`).join("")}</div>`;
+  return s;
+}
+
+/* barras apiladas horizontales por nivel de alerta: cats = [{label, parts:{RED,AMBER,WATCH,'ON TRACK'}}] */
+function stacked(cats, unit) {
+  const W = 520, rh = 27, L = 150, R = 56, T = 4, B = 26, H = T + cats.length * rh + B;
+  const tot = c => sum(LEVELS, l => c.parts[l] || 0), maxV = Math.max(...cats.map(tot), 1);
+  const x = v => L + (W - L - R) * v / maxV;
+  let s = `<svg viewBox="0 0 ${W} ${H}">`;
+  for (const t of niceTicks(maxV, 4)) s += `<line x1="${x(t)}" x2="${x(t)}" y1="${T}" y2="${T + cats.length * rh}" stroke="var(--grid)"/><text x="${x(t)}" y="${H - 8}" text-anchor="middle">${unit === "$" ? usd(t) : t}</text>`;
+  cats.forEach((c, i) => {
+    const y = T + i * rh; let acc = 0;
+    s += `<text x="${L - 8}" y="${y + rh / 2 + 4}" text-anchor="end">${esc(c.label)}</text>`;
+    for (const l of LEVELS) {
+      const v = c.parts[l] || 0; if (!v) continue;
+      s += `<rect x="${x(acc)}" y="${y + 5}" width="${Math.max(1, x(acc + v) - x(acc))}" height="${rh - 10}" fill="${LCOLOR[l]}" data-tip="${esc(c.label + "\n" + l + ": " + (unit === "$" ? usd(v) : v + " case" + (v > 1 ? "s" : "")))}"/>`;
+      acc += v;
+    }
+    s += `<text x="${x(acc) + 6}" y="${y + rh / 2 + 4}" class="strong">${unit === "$" ? usd(acc) : acc}</text>`;
+  });
+  return s + "</svg>";
+}
+const groupLevels = (rows, keyFn, valFn) => { const m = new Map(); for (const r of rows) { const k = keyFn(r); if (!m.has(k)) m.set(k, {}); const p = m.get(k); p[r.level] = (p[r.level] || 0) + valFn(r); } return m; };
+
+/* ───────────────────────── render ───────────────────────── */
+function update() {
+  const all = classify(), view = sortRows(applyFilters(all));
+  // control de consistencia: sin what-if, el cálculo del navegador debe coincidir con la vista SQL
+  const mism = !S.custom && all.some((r, i) => r.level !== D.alerts[i].alert_level);
+  $("#warn").innerHTML = mism ? `<div class="warn">Alert levels computed in the browser differ from pi.v_open_case_alerts. Check the thresholds.</div>` : "";
+  $("#caption").innerHTML = `Alerts measured as of <b>${fdate(P.cutoff)}</b> (report cutoff in <code>pi.report_params</code>, not today's date) · synthetic data · snapshot built ${esc(D.generated_at)} from PostgreSQL` + (S.custom ? " · <b>what-if thresholds active</b>" : "");
+  $("#footnote").textContent = "Static snapshot: filters, sorting and what-if run in your browser. To refresh from the database, re-run python/03_build_dashboard.py.";
+
+  if (!view.length) {
+    $("#kpis").innerHTML = ""; for (const t of ["queue", "map", "owners", "method"]) $("#tab-" + t).innerHTML = "";
+    $("#tab-queue").innerHTML = `<div class="card">No open cases match the current filters.</div>`; showTab(); return;
+  }
+  const flagged = view.filter(r => r.flagged), mix = l => view.filter(r => r.level === l).length;
+  $("#kpis").innerHTML = [
+    ["Open cases", view.length, view.length !== all.length ? `of ${all.length} total` : ""],
+    ["Money at stake", usd(sum(view, r => r.money_at_stake)), ""],
+    ["Flagged cases", flagged.length, `${pct0(flagged.length / view.length)} of shown`],
+    ["Flagged money", usd(sum(flagged, r => r.money_at_stake)), ""],
+    [`${dot("RED")}Red · ${dot("AMBER")}Amber · ${dot("WATCH")}Watch`, `${mix("RED")} · ${mix("AMBER")} · ${mix("WATCH")}`, ""]
+  ].map(([l, v, s]) => `<div class="card kpi"><div class="label">${l}</div><div class="value">${v}</div>${s ? `<span class="sub">${s}</span>` : ""}</div>`).join("");
+
+  if (!view.some(r => r.case_id === S.selected)) S.selected = (view.find(r => r.flagged) || view[0]).case_id;
+  renderQueue(view); renderMap(view); renderOwners(view); renderMethod(all); showTab();
+}
+
+function renderQueue(view) {
+  const maxPct = Math.max(150, Math.ceil(Math.max(...view.map(r => r.pct)) / 10) * 10);
+  const rows = view.map(r => `<tr tabindex="0" data-id="${esc(r.case_id)}" class="${r.case_id === S.selected ? "sel" : ""}">
+    <td>${dot(r.level)}${r.level}</td><td>${esc(r.case_id)}</td><td>${esc(r.phase_name)}</td>
+    <td class="n">${r.days_in_current_phase}</td><td class="n">${r.thr.toFixed(0)}</td>
+    <td class="n"><span class="bar"><i style="width:${Math.min(100, r.pct / maxPct * 100)}%"></i></span>${Math.round(r.pct)}%</td>
+    <td class="n">${usd(r.money_at_stake)}</td><td>${esc(r.case_manager)}</td><td>${esc(r.insurance_company)}</td>
+    <td class="n">${r.over.toFixed(0)}</td><td>${esc(r.injury_type)}</td><td>${esc(r.case_stage)}</td>
+    <td>${r.amount_basis === "Actual settlement" ? "Accepted" : "Estimated"}</td></tr>`).join("");
+  const c = view.find(r => r.case_id === S.selected), det = D.detail[c.case_id];
+  const m = D.managers.find(x => x.case_manager === c.case_manager), k = D.carriers.find(x => x.insurance_company === c.insurance_company);
+  const fee = c.firm_fee_at_stake / c.money_at_stake;
+  $("#tab-queue").innerHTML = `
+    <div class="tablewrap"><table><thead><tr><th>Alert</th><th>Case</th><th>Current phase</th><th class="n">Days</th><th class="n">Limit (d)</th><th>% of limit</th>
+      <th class="n">At stake</th><th>Manager</th><th>Carrier</th><th class="n">Over by (d)</th><th>Injury</th><th>Stage</th><th>Amount</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="toolbar"><span class="muted small">Click a row to inspect that case below (by default: the first flagged case). “Estimated” amounts come from similar closed cases.</span>
+      <button class="btn" id="export">⬇ Export CSV</button></div>
+    <div class="detail"><h2>${dot(c.level)}${esc(c.case_id)} · ${esc(c.phase_name)}</h2>
+      <div class="detail-grid">
+        <div>
+          <div class="metric"><div class="label">Money at stake</div><div class="value">${usd(c.money_at_stake)}</div><span class="chip">${c.amount_basis === "Actual settlement" ? "accepted settlement" : "estimated"}</span></div>
+          <div class="metric"><div class="label">Firm fee at stake</div><div class="value">${usd(c.firm_fee_at_stake)}</div><span class="chip">${pct0(fee)} fee · ${esc(c.case_stage)}</span></div>
+          <div class="metric"><div class="label">Days open</div><div class="value">${c.days_open}</div><span class="chip">since ${fdate(c.intake_date)}</span></div>
+        </div>
+        <div>
+          <div class="metric"><div class="label">Days in current phase</div><div class="value">${c.days_in_current_phase}</div><span class="chip">${pct0(c.pct / 100)} of ${c.thr.toFixed(0)} d threshold</span></div>
+          <p><b>Manager:</b> ${esc(c.case_manager)}<br><span class="muted small">${m ? `Controllable median ${m.median_controllable_days.toFixed(0)} d (${spct(m.controllable_vs_firm_pct)} vs firm) · ${esc(m.performance_flag)}` : ""}</span></p>
+          <p><b>Carrier:</b> ${esc(c.insurance_company)}<br><span class="muted small">${k ? `Offer wait ${k.median_offer_wait_days.toFixed(0)} d (${esc(k.offer_wait_flag)}) · check wait ${k.median_check_wait_days.toFixed(0)} d (${esc(k.check_wait_flag)})${k.sample_flag === "Low sample" ? " · low sample" : ""}` : ""}</span></p>
+        </div>
+        <div class="chartcol">${phaseChart(c, det)}</div>
+      </div>
+      <div class="callout ${lcls(c.level)}"><b>Next action (${c.level}):</b> ${esc(ACTIONS[c.current_phase])}</div></div>`;
+  $("#export").onclick = () => exportCsv(view);
+}
+
+function renderMap(view) {
+  const phaseCats = groupLevels(view, r => r.phase_name, r => 1), phaseMoney = groupLevels(view, r => r.phase_name, r => r.money_at_stake);
+  const cats = m => PNAMES.map(n => ({ label: n, parts: m.get(n) || {} }));
+  $("#tab-map").innerHTML = `<p><b>Where is the money, and how close is each case to its alert threshold?</b> Cases to the right of a dashed line have crossed that alert level; bigger bubbles = more money. Click a bubble to open the case.</p>
+    <div class="card">${riskMap(view)}</div>
+    <div class="two"><div><h3>Open cases by current phase</h3>${stacked(cats(phaseCats), "n")}</div>
+      <div><h3>Money at stake by current phase</h3>${stacked(cats(phaseMoney), "$")}</div></div>`;
+}
+
+function ownerTable(view, keyFn, extraHead, extraCells) {
+  const names = [...new Set(view.map(keyFn))].sort();
+  const body = names.map(n => {
+    const rs = view.filter(r => keyFn(r) === n), fl = rs.filter(r => r.flagged), cnt = l => rs.filter(r => r.level === l).length;
+    return `<tr><td>${esc(n)}</td><td class="n">${rs.length}</td><td class="n">${usd2(sum(rs, r => r.money_at_stake))}</td>
+      <td class="n">${cnt("RED")}</td><td class="n">${cnt("AMBER")}</td><td class="n">${cnt("WATCH")}</td><td class="n">${usd2(sum(fl, r => r.money_at_stake))}</td>${extraCells(n)}</tr>`;
+  }).join("");
+  return `<div class="tablewrap" style="max-height:none"><table class="static"><thead><tr><th>Name</th><th class="n">Open</th><th class="n">At stake</th>
+    <th class="n">${dot("RED")}</th><th class="n">${dot("AMBER")}</th><th class="n">${dot("WATCH")}</th><th class="n">Flagged $</th>${extraHead}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+function renderOwners(view) {
+  const ownerChart = keyFn => { const g = groupLevels(view, keyFn, () => 1); const c = [...g.entries()].map(([label, parts]) => ({ label, parts })); c.sort((a, b) => sum(LEVELS, l => b.parts[l] || 0) - sum(LEVELS, l => a.parts[l] || 0)); return stacked(c, "n"); };
+  const mCells = n => { const m = D.managers.find(x => x.case_manager === n); return m ? `<td class="n">${m.closed_cases}</td><td class="n">${m.median_controllable_days.toFixed(1)}</td><td class="n">${spct(m.controllable_vs_firm_pct)}</td><td>${shortFlag(m.performance_flag)}</td><td>${esc(m.sample_flag)}</td>` : "<td></td>".repeat(5); };
+  const cCells = n => { const c = D.carriers.find(x => x.insurance_company === n); return c ? `<td class="n">${c.closed_cases}</td><td class="n">${c.median_offer_wait_days.toFixed(1)}</td><td>${shortFlag(c.offer_wait_flag)}</td><td class="n">${c.median_check_wait_days.toFixed(1)}</td><td>${shortFlag(c.check_wait_flag)}</td><td>${esc(c.sample_flag)}</td>` : "<td></td>".repeat(6); };
+  $("#tab-owners").innerHTML = `<p class="muted">Open-case load and alerts per owner, next to each owner's <b>closed-case</b> scorecard. Scorecards describe the past and are not adjusted for case mix: read low-sample flags with caution.</p>
+    <h3>Case managers</h3>${ownerTable(view, r => r.case_manager, "<th class='n'>Closed n</th><th class='n'>Controllable med. (d)</th><th class='n'>vs firm</th><th>Scorecard</th><th>Sample</th>", mCells)}
+    <div class="card" style="margin-top:12px">${ownerChart(r => r.case_manager)}</div>
+    <h3>Insurance carriers</h3>${ownerTable(view, r => r.insurance_company, "<th class='n'>Closed n</th><th class='n'>Offer wait med. (d)</th><th>Offer flag</th><th class='n'>Check wait med. (d)</th><th>Check flag</th><th>Sample</th>", cCells)}
+    <div class="card" style="margin-top:12px">${ownerChart(r => r.insurance_company)}</div>
+    <div class="legend" style="margin-top:8px">${LEVELS.map(l => `<span style="--c:${LCOLOR[l]}">${l}</span>`).join("")}</div>`;
+}
+
+function renderMethod(all) {
+  const watch = S.custom ? S.watch / 100 : P.watch, red = S.custom ? S.red : P.red, scale = S.custom ? S.scale / 100 : 1;
+  const thr = new Map(); all.forEach(r => thr.set(r.current_phase, r.thr));
+  const nActual = D.alerts.filter(a => a.amount_basis === "Actual settlement").length;
+  $("#tab-method").innerHTML = `<h2>How an alert is calculated</h2>
+    <p>Each open case sits in exactly one of the 9 phases, deduced from which milestones are still empty (NULL). The days it has spent in that phase are compared with that phase's threshold:</p>
+    <div class="tablewrap" style="max-height:none;max-width:560px"><table class="static"><thead><tr><th>Level</th><th>Rule</th><th>Current value</th></tr></thead><tbody>
+      <tr><td>${dot("WATCH")}WATCH</td><td>days ≥ WATCH % × threshold</td><td>${pct0(watch)}</td></tr>
+      <tr><td>${dot("AMBER")}AMBER</td><td>days &gt; threshold</td><td>${pct0(scale)} of stored thresholds</td></tr>
+      <tr><td>${dot("RED")}RED</td><td>days &gt; threshold × multiplier</td><td>${(+red).toFixed(1)}×</td></tr></tbody></table></div>
+    <p>Thresholds, the multiplier and the cutoff date live in the <code>pi.report_params</code> table, not in the code. With the what-if switch off, this page shows exactly what <code>pi.v_open_case_alerts</code> returns.</p>
+    <p><b>Money at stake:</b> the accepted settlement when there is one (${nActual} of the ${D.alerts.length} open cases); otherwise an estimate from similar closed cases (injury type), which is why those amounts are labeled <i>Estimated</i>.</p>
+    <p><b>Caveats:</b> all data is synthetic; scorecards use few cases per owner and are not adjusted for case mix; thresholds are initial values near the 75th percentile of closed-case phase durations. See the project README.</p>
+    <h3>Thresholds in use (phases with open cases)</h3>
+    <div class="tablewrap" style="max-height:none;max-width:360px"><table class="static"><thead><tr><th>Phase</th><th class="n">Threshold (days)</th></tr></thead><tbody>
+      ${PHASES.filter(p => thr.has(p[0])).map(p => `<tr><td>${p[1]}</td><td class="n">${thr.get(p[0]).toFixed(0)}</td></tr>`).join("")}</tbody></table></div>`;
+}
+
+/* ───────────────────────── pestañas, exportación, tooltips ───────────────────────── */
+const TABS = [["queue", "🚨 Alert queue"], ["map", "🗺️ Risk map"], ["owners", "👥 Owners"], ["method", "ℹ️ Method"]];
+function buildTabs() {
+  $("#tabs").innerHTML = TABS.map(([k, l]) => `<button role="tab" data-tab="${k}">${l}</button>`).join("");
+  $("#tabs").addEventListener("click", e => { const b = e.target.closest("button[data-tab]"); if (b) { S.tab = b.dataset.tab; showTab(); } });
+}
+function showTab() {
+  for (const [k] of TABS) { $("#tab-" + k).hidden = k !== S.tab; }
+  document.querySelectorAll("#tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === S.tab)));
+}
+function exportCsv(view) {
+  const cols = [["case_id", r => r.case_id], ["alert_level", r => r.level], ["case_manager", r => r.case_manager], ["insurance_company", r => r.insurance_company],
+    ["injury_type", r => r.injury_type], ["case_stage", r => r.case_stage], ["phase_name", r => r.phase_name], ["days_in_current_phase", r => r.days_in_current_phase],
+    ["threshold_used", r => r.thr], ["days_over", r => r.over], ["money_at_stake", r => r.money_at_stake], ["amount_basis", r => r.amount_basis],
+    ["firm_fee_at_stake", r => r.firm_fee_at_stake], ["intake_date", r => r.intake_date], ["phase_start_date", r => r.phase_start_date]];
+  const q = v => { const s = String(v ?? ""); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const csv = [cols.map(c => c[0]).join(","), ...view.map(r => cols.map(c => q(c[1](r))).join(","))].join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  a.download = "pi_open_case_alerts.csv"; document.body.appendChild(a); a.click(); a.remove();
+}
+document.addEventListener("click", e => {
+  const circle = e.target.closest("circle[data-id]"), tr = e.target.closest("#tab-queue tbody tr[data-id]");
+  const id = circle ? circle.dataset.id : tr ? tr.dataset.id : null;
+  if (id) { S.selected = id; S.tab = "queue"; update(); if (circle) $(".detail").scrollIntoView({ behavior: "smooth" }); }
+});
+document.addEventListener("keydown", e => { const tr = e.target.closest("#tab-queue tbody tr[data-id]"); if (tr && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); S.selected = tr.dataset.id; update(); } });
+const tip = $("#tooltip");
+document.addEventListener("mousemove", e => {
+  const t = e.target.closest ? e.target.closest("[data-tip]") : null;
+  if (!t) { tip.style.opacity = 0; return; }
+  tip.innerHTML = t.getAttribute("data-tip").split("\n").map(esc).join("<br>"); tip.style.opacity = 1;
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = Math.min(e.clientX + 14, window.innerWidth - w - 8) + "px";
+  tip.style.top = Math.min(e.clientY + 14, window.innerHeight - h - 8) + "px";
+});
+
+buildSidebar(); buildTabs(); syncSidebar(); update();
+})();
+</script>
+</body>
+</html>

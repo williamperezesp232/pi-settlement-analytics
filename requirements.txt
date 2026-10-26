@@ -1,0 +1,10 @@
+# Legal Operations & Analytics - PI case study
+# Tested with: Python 3.12 | pandas 3.0 | numpy 2.4 | Faker 40 | SQLAlchemy 2.1 | pg8000 1.31 | matplotlib 3.10 | seaborn 0.13 | Streamlit 1.66
+pandas
+numpy
+faker
+matplotlib
+seaborn>=0.13        # legend=False in stripplot needs >= 0.13
+sqlalchemy>=2.0
+pg8000>=1.30         # pure-Python PostgreSQL driver: no .pyd/.dll, so Windows App Control cannot block it
+streamlit>=1.66      # dashboard (app.py); uses width="stretch" and other recent APIs; brings Altair and pyarrow

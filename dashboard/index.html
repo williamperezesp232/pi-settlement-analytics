@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PI Legal Ops · Live Case Alerts</title>
+<style>
+:root {
+  --bg:#f5f6f8; --panel:#ffffff; --sidebar:#eceff3; --text:#1d2733; --muted:#66727f; --line:#e1e5ea;
+  --accent:#e4572e; --red:#d1495b; --amber:#f4a261; --watch:#e9c46a; --ok:#b8c4cc; --teal:#2a9d8f;
+  --grid:#e8ebef;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#12161b; --panel:#1b2128; --sidebar:#161b21; --text:#e7eaee; --muted:#98a3af; --line:#2b343e;
+          --ok:#5d6975; --grid:#262e37; }
+}
+* { box-sizing:border-box; }
+html { color-scheme: light dark; }
+body { margin:0; font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       background:var(--bg); color:var(--text); }
+.app { display:grid; grid-template-columns:272px minmax(0,1fr); min-height:100vh; }
+.sidebar { background:var(--sidebar); border-right:1px solid var(--line); padding:18px 16px; position:sticky; top:0;
+           height:100vh; overflow:auto; }
+main { padding:22px 28px 48px; min-width:0; }
+@media (max-width:900px) { .app { grid-template-columns:1fr; } .sidebar { position:static; height:auto; } main { padding:16px; } }
+
+h1 { font-size:28px; margin:0 0 4px; letter-spacing:-.01em; }
+h2 { font-size:19px; margin:0 0 10px; }
+h3 { font-size:15px; margin:18px 0 8px; }
+.caption { color:var(--muted); font-size:12.5px; margin:0 0 16px; }
+.muted { color:var(--muted); }
+.small { font-size:12px; }
+
+.sidebar h2 { font-size:17px; margin:0 0 12px; }
+.field { margin-bottom:11px; }
+.field > label, .field > .lab { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
+details.ms { background:var(--panel); border:1px solid var(--line); border-radius:7px; }
+details.ms summary { list-style:none; cursor:pointer; padding:7px 10px; font-size:13px; display:flex; justify-content:space-between;
+                     align-items:center; gap:8px; }
+details.ms summary::-webkit-details-marker { display:none; }
+details.ms summary::after { content:"▾"; color:var(--muted); }
+details.ms[open] summary { border-bottom:1px solid var(--line); }
+details.ms .opts { max-height:170px; overflow:auto; padding:6px 10px; }
+details.ms .opts label { display:flex; gap:8px; align-items:center; padding:3px 0; font-size:13px; cursor:pointer; }
+.radio label { display:flex; gap:8px; align-items:center; font-size:13px; padding:2px 0; cursor:pointer; }
+select, input[type=range] { width:100%; }
+select { padding:6px 8px; border-radius:7px; border:1px solid var(--line); background:var(--panel); color:var(--text); font:inherit; }
+input[type=range] { accent-color:var(--accent); }
+.rv { float:right; color:var(--accent); font-size:12px; }
+hr { border:0; border-top:1px solid var(--line); margin:14px 0; }
+.switch { display:flex; gap:9px; align-items:flex-start; font-size:13px; cursor:pointer; }
+.btns { display:grid; grid-template-columns:1fr; gap:8px; }
+button.btn { background:var(--panel); color:var(--text); border:1px solid var(--line); border-radius:7px; padding:7px 10px;
+             font:inherit; cursor:pointer; }
+button.btn:hover { border-color:var(--accent); }
+
+.kpis { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; margin-bottom:18px; }
+@media (max-width:1150px) { .kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+.card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px 14px; }
+.kpi .label { font-size:12px; color:var(--muted); }
+.kpi .value { font-size:28px; font-weight:600; line-height:1.2; margin-top:2px; }
+.kpi .sub { display:inline-block; margin-top:4px; font-size:11.5px; color:var(--muted); background:var(--bg); padding:1px 8px; border-radius:10px; }
+
+.tabs { display:flex; gap:2px; border-bottom:1px solid var(--line); margin-bottom:16px; flex-wrap:wrap; }
+.tabs button { background:none; border:0; padding:9px 14px; cursor:pointer; color:var(--muted); font:inherit;
+               border-bottom:2px solid transparent; margin-bottom:-1px; }
+.tabs button[aria-selected=true] { color:var(--text); font-weight:600; border-bottom-color:var(--accent); }
+
+.dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:baseline; }
+.dot.RED { background:var(--red); } .dot.AMBER { background:var(--amber); } .dot.WATCH { background:var(--watch); }
+.dot.ON-TRACK { background:#4caf7d; }
+
+.tablewrap { overflow:auto; border:1px solid var(--line); border-radius:10px; background:var(--panel); max-height:440px; }
+table { border-collapse:collapse; width:100%; font-size:12.5px; }
+th { position:sticky; top:0; background:var(--panel); text-align:left; color:var(--muted); font-weight:600; padding:8px 10px;
+     border-bottom:1px solid var(--line); white-space:nowrap; z-index:1; }
+td { padding:7px 10px; border-bottom:1px solid var(--line); white-space:nowrap; }
+td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
+tbody tr { cursor:pointer; }
+tbody tr:hover { background:color-mix(in srgb, var(--accent) 7%, transparent); }
+tbody tr.sel { background:color-mix(in srgb, var(--accent) 16%, transparent); }
+tbody tr:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
+.bar { display:inline-block; width:64px; height:7px; background:var(--line); border-radius:4px; vertical-align:middle; margin-right:6px; overflow:hidden; }
+.bar i { display:block; height:100%; background:var(--accent); }
+table.static tbody tr { cursor:default; } table.static tbody tr:hover { background:none; }
+.toolbar { display:flex; justify-content:space-between; align-items:center; gap:12px; margin:8px 0 0; }
+
+.detail { margin-top:22px; padding-top:18px; border-top:1px solid var(--line); }
+.detail-grid { display:grid; grid-template-columns:minmax(150px,1fr) minmax(190px,1fr) minmax(300px,2fr); gap:20px; align-items:start; }
+@media (max-width:1100px) { .detail-grid { grid-template-columns:1fr 1fr; } .detail-grid .chartcol { grid-column:1 / -1; } }
+.metric { margin-bottom:14px; } .metric .label { font-size:12px; color:var(--muted); }
+.metric .value { font-size:28px; font-weight:500; line-height:1.15; }
+.chip { display:inline-block; font-size:11.5px; color:var(--muted); background:var(--panel); border:1px solid var(--line); padding:0 8px; border-radius:10px; }
+.callout { margin-top:14px; padding:12px 14px; border-radius:8px; border:1px solid var(--line); border-left-width:5px; background:var(--panel); }
+.callout.RED { border-left-color:var(--red); } .callout.AMBER { border-left-color:var(--amber); }
+.callout.WATCH { border-left-color:var(--watch); } .callout.ON-TRACK { border-left-color:#4caf7d; }
+
+svg { display:block; width:100%; height:auto; overflow:visible; }
+svg text { fill:var(--muted); font:11px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+svg text.strong { fill:var(--text); font-weight:600; }
+.legend { display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--muted); margin:6px 0 2px; }
+.legend span::before { content:""; display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; background:var(--c); }
+.two { display:grid; grid-template-columns:1fr 1fr; gap:22px; }
+@media (max-width:1100px) { .two { grid-template-columns:1fr; } }
+#tooltip { position:fixed; z-index:50; pointer-events:none; background:#1d2733; color:#fff; padding:7px 10px; border-radius:6px;
+           font-size:12px; line-height:1.4; max-width:280px; opacity:0; transition:opacity .08s; box-shadow:0 4px 14px rgba(0,0,0,.25); }
+.note { font-size:12px; color:var(--muted); margin-top:26px; }
+.warn { background:#fff4e5; color:#7a4b00; border:1px solid #f0c987; border-radius:8px; padding:10px 12px; margin-bottom:14px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar" aria-label="Filters"></aside>
+  <main>
+    <h1>⚖️ PI Legal Ops: Live Case Alerts</h1>
+    <p class="caption" id="caption"></p>
+    <div id="warn"></div>
+    <section class="kpis" id="kpis"></section>
+    <nav class="tabs" id="tabs" role="tablist"></nav>
+
+    <section id="tab-queue" role="tabpanel"></section>
+    <section id="tab-map" role="tabpanel" hidden></section>
+    <section id="tab-owners" role="tabpanel" hidden></section>
+    <section id="tab-method" role="tabpanel" hidden></section>
+
+    <p class="note" id="footnote"></p>
+  </main>
+</div>
+<div id="tooltip" role="tooltip"></div>
+
+<script>
+const D = {"generated_at":"2026-10-26 13:07","params":{"cutoff":"2026-10-13","watch":0.8,"red":1.5},"alerts":[{"priority_rank":1,"case_id":"PI-2024-0073","case_manager":"Daniel Wagner","insurance_company":"Farmers","injury_type":"Motorcycle Accident","case_stage":"Pre-suit","money_at_stake":681400.0,"amount_basis":"Actual settlement","firm_fee_at_stake":224862.0,"current_phase":"disbursement_prep","phase_name":"Disbursement Prep","phase_type":"Controllable","phase_start_date":"2026-10-10","days_in_current_phase":3,"threshold_days":7,"days_over_threshold":0,"pct_of_threshold_used":0.43,"alert_level":"ON TRACK","days_open":676,"intake_date":"2024-12-06","suggested_action":"Cerrar Closing Statement y emitir pago al cliente."},{"priority_rank":2,"case_id":"PI-2025-0031","case_manager":"Daniel Wagner","insurance_company":"GEICO","injury_type":"Truck/Commercial Vehicle","case_stage":"Pre-suit","money_at_stake":502850.0,"amount_basis":"Estimated (injury median)","firm_fee_at_stake":165940.5,"current_phase":"treatment","phase_name":"Treatment","phase_type":"Clinical","phase_start_date":"2025-09-02","days_in_current_phase":406,"threshold_days":365,"days_over_threshold":41,"pct_of_threshold_used":1.11,"alert_level":"AMBER","days_open":406,"intake_date":"2025-09-02","suggested_action":"Check-in con el cliente y proveedores; confirmar fecha estimada de alta/MMI."},{"priority_rank":3,"case_id":"PI-2025-0014","case_manager":"Noah Rhodes","insurance_company":"State Farm","injury_type":"Auto - Fracture/Surgery","case_stage":"Litigation","money_at_stake":459750.0,"amount_basis":"Actual settlement","firm_fee_at_stake":183900.0,"current_phase":"carrier_check_wait","phase_name":"Carrier Check Wait","phase_type":"External","phase_start_date":"2026-10-08","days_in_current_phase":5,"threshold_days":21,"days_over_threshold":0,"pct_of_threshold_used":0.24,"alert_level":"ON TRACK","days_open":551,"intake_date":"2025-04-10","suggested_action":"Confirmar recepción del Release y fecha de emisión del cheque con el adjuster."},{"priority_rank":4,"case_id":"PI-2025-0034","case_manager":"Cristian Santos","insurance_company":"GEICO","injury_type":"Auto - Fracture/Surgery","case_stage":"Litigation","money_at_stake":440425.0,"amount_basis":"Estimated (injury median)","firm_fee_at_stake":176170.0,"current_phase":"treatment","phase_name":"Treatment","phase_type":"Clinical","phase_start_date":"2025-10-03","days_in_current_phase":375,"threshold_days":365,"days_over_threshold":10,"pct_of_threshold_used":1.03,"alert_level":"AMBER","days_open":375,"intake_date":"2025-10-03","suggested_action":"Check-in con el cliente y proveedores; confirmar fecha estimada de alta/MMI."},{"priority_rank":5,"case_id":"PI-2026-0007","case_manager":"Noah Rhodes","insurance_company":"GEICO","injury_type":"Auto - Fracture/Surgery","case_stage":"Pre-suit","money_at_stake":440425.0,"amount_basis":"Estimated (injury median)","firm_fee_at_stake":145340.25,"current_phase":"treatment","phase_name":"Treatment","phase_type":"Clinical","phase_start_date":"2026-03-22","days_in_current_phase":205,"threshold_days":365,"days_over_threshold":0,"pct_of_threshold_used":0.56,"alert_level":"ON TRACK","days_open":205,"intake_date":"2026-03-22","suggested_action":"Check-in con el cliente y proveedores; confirmar fecha estimada de alta/MMI."},{"priority_rank":6,"case_id":"PI-2026-0020","case_manager":"Allison Hill","insurance_company":"Progressive","injury_type":"Auto - Fracture/Surgery","case_stage":"Litigation","money_at_stake":440425.0,"amount_basis":"Estimated (injury median)","firm_fee_at_stake":176170.0,"current_phase":"treatment","phase_name":"Treatment","phase_type":"Clinical","phase_start_date":"2026-09-05","days_in_current_phase":38,"threshold_days":365,"days_over_threshold":0,"pct_of_threshold_used":0.1,"alert_level":"ON TRACK","days_open":38,"intake_date":"2026-09-05","suggested_action":"Check-in con el cliente y proveedores; confirmar fecha estimada de alta/MMI."},{"priority_rank":7,"case_id":"PI-2024-0075","case_manager":"Allison Hill","insurance_company":"Allstate","injury_type":"Auto - Fracture/Surgery","case_stage":"Litigation","money_at_stake":413633.56,"amount_basis":"Estimated (bills x mult)","firm_fee_at_stake":165453.42,"current_phase":"negotiation","phase_name":"Strategic Negotiation","phase_type":"Strategic","phase_start_date":"2026-07-07","days_in_current_phase":98,"threshold_days":120,"days_over_threshold":0,"pct_of_threshold_used":0.82,"alert_level":"WATCH","days_open":669,"intake_date":"2024-12-13","suggested_action":"Revisar estrategia con el abogado: counter, mediación o evaluar litigio."},{"priority_rank":8,"case_id":"PI-2026-0003","case_manager":"Daniel Wagner","insurance_company":"GEICO","injury_type":"Truck/Commercial Vehicle","case_stage":"Pre-suit","money_at_stake":351001.58,"amount_basis":"Estimated (bills x mult)","firm_fee_at_stake":115830.52,"current_phase":"demand_prep","phase_name":"Demand Prep","phase_type":"Controllable","phase_start_date":"2026-10-12","days_in_current_phase":1,"threshold_days":21,"days_over_threshold":0,"pct_of_threshold_used":0.05,"alert_level":"ON TRACK","days_open":240,"intake_date":"2026-02-15","suggested_action":"Priorizar el demand package; revisar carga de trabajo del manager."},{"priority_rank":9,"case_id":"PI-2025-0017","case_manager":"Daniel Wagner","insurance_company":"State Farm","injury_type":"Auto - Fracture/Surgery","case_stage":"Pre-suit","money_at_stake":349350.0,"amount_basis":"Actual settlement","firm_fee_at_stake":115285.5,"current_phase":"release_execution","phase_name":"Release Execution","phase_type":"Controllable","phase_start_date":"2026-09-24","days_in_current_phase":19,"threshold_days":14,"days_over_threshold":5,"pct_of_threshold_used":1.36,"alert_level":"AMBER","days_open":521,"intake_date":"2025-05-10","suggested_action":"Contactar al cliente para firma/notarización; reenviar el Release hoy."},{"priority_rank":10,"case_id":"PI-2025-0010","case_manager":"Angie Henderson","insurance_company":"Allstate","injury_type":"Pedestrian/Bicycle","case_stage":"Litigation","money_at_stake":320950.0,"amount_basis":"Actual settlement","firm_fee_at_stake":128380.0,"current_phase":"release_execution","phase_name":"Release Execution","phase_type":"Controllable","phase_start_date":"2026-10-13","days_in_current_phase":0,"threshold_days":14,"days_over_threshold":0,"pct_of_threshold_used":0.0,"alert_level":"ON TRACK","days_open":573,"intake_date":"2025-03-19","suggested_action":"Contactar al cliente para firma/notarización; reenviar el Release hoy."},{"priority_rank":11,"case_id":"PI-2025-0016","case_manager":"Noah Rhodes","insurance_company":"Farmers","injury_type":"Auto - Spine/Injections","case_stage":"Pre-suit","money_at_stake":277276.46,"amount_basis":"Estimated (bills x mult)","firm_fee_at_stake":91501.23,"current_phase":"negotiation","phase_name":"Strategic Negotiation","phase_type":"Strategic","phase_start_date":"2026-10-10","days_in_current_phase":3,"threshold_days":120,"days_over_threshold":0,"pct_of_threshold_used":0.03,"alert_level":"ON TRACK","days_open":523,"intake_date":"2025-05-08","suggested_action":"Revisar estrategia con el abogado: counter, mediación o evaluar litigio."},{"priority_rank":12,"case_id":"PI-2025-0027","case_manager":"Allison Hill","insurance_company":"Allstate","injury_type":"Auto - Fracture/Surgery","case_stage":"Pre-suit","money_at_stake":253279.17,"amount_basis":"Estimated (bills x mult)","firm_fee_at_stake":83582.13,"current_phase":"offer_wait","phase_name":"Adjuster Offer Wait","phase_type":"External","phase_start_date":"2026-09-04","days_in_current_phase":39,"threshold_days":60,"days_over_threshold":0,"pct_of_threshold_used":0.65,"alert_level":"ON TRACK","days_open":457,"intake_date":"2025-07-13","suggested_action":"Follow-up al adjuster; escalar al supervisor del carrier si supera el plazo."},{"priority_rank":13,"case_id":"PI-2026-0005","case_manager":"Daniel Wagner","insurance_company":"State Farm","injury_type":"Motorcycle Accident","case_stage":"Litigation","money_at_stake":221900.0,"amount_basis":"Estimated (injury median)","firm_fee_at_stake":88760.0,"current_phase":"treatment","phase_name":"Treatment","phase_type":"Clinical","phase_start_date":"2026-02-18","days_in_current_phase":237,"threshold_days":365,"days_over_threshold":0,"pct_of_threshold_used":0.65,"alert_level":"ON TRACK","days_open":237,"intake_date":"2026-02-18","suggested_action":"Check-in con el cliente y proveedores; confirmar fecha estimada de alta/MMI."},{"priority_rank":14,"case_id":"PI-2026-0014","case_manager":"Noah Rhodes","insurance_company":"Progressive","injury_type":"Motorcycle Accident","case_stage":"Pre-suit","money_at_stake":221900.0,"amount_basis":"Estimated (injury median)","firm_fee_at_stake":73227.0,"current_phase":"treatment","phase_name":"Treatment","phase_type":"Clinical","phase_start_date":"2026-06-10","days_in_current_phase":125,"threshold_days":365,"days_over_threshold":0,"pct_of_threshold_used":0.34,"alert_level":"ON TRACK","days_open":125,"intake_date":"2026-06-10","suggested_action":"Check-in con el cliente y proveedores; confirmar fecha estimada de alta/MMI."},{"priority_rank":15,"case_id":"PI-2026-0018","case_manager":"Allison Hill","insurance_company":"USAA","injury_type":"Motorcycle Accident","case_stage":"Pre-suit","money_at_stake":221900.0,"amount_basis":"Estimated (injury median)","firm_fee_at_stake":73227.0,"current_phase":"treatment","phase_name":"Treatment","phase_type":"Clinical","phase_start_date":"2026-07-27","days_in_current_phase":78,"threshold_days":365,"days_over_threshold":0,"pct_of_threshold_used":0.21,"alert_level":"ON TRACK","days_open":78,"intake_date":"2026-07-27","suggested_action":"Check-in con el cliente y proveedores; confirmar fecha estimada de alta/MMI."},{"priority_rank":16,"case_id":"PI-2025-0022","case_manager":"Angie Henderson","insurance_company":"Farmers","injury_type":"Auto - Spine/Injections","case_stage":"Pre-suit","money_at_stake":215950.0,"amount_basis":"Actual settlement","firm_fee_at_stake":71263.5,"current_phase":"carrier_check_wait","phase_name":"Carrier Check Wait","phase_type":"External","phase_start_date":"2026-10-10","days_in_current_phase":3,"threshold_days":21,"days_over_threshold":0,"pct_of_threshold_used":0.14,"alert_level":"ON TRACK","days_open":504,"intake_date":"2025-05-27","suggested_action":"Confirmar recepción del Release y fecha de emisión del cheque con el adjuster."},{"priority_rank":17,"case_id":"PI-2024-0076","case_manager":"Daniel Wagner","insurance_company":"Farmers","injury_type":"Auto - Fracture/Surgery","case_stage":"Pre-suit","money_at_stake":206678.26,"amount_basis":"Estimated (bills x mult)","firm_fee_at_stake":68203.83,"current_phase":"offer_wait","phase_name":"Adjuster Offer Wait","phase_type":"External","phase_start_date":"2026-09-24","days_in_current_phase":19,"threshold_days":60,"days_over_threshold":0,"pct_of_threshold_used":0.32,"alert_level":"ON TRACK","days_open":669,"intake_date":"2024-12-13","suggested_action":"Follow-up al adjuster; escalar al supervisor del carrier si supera el plazo."},{"priority_rank":18,"case_id":"PI-2026-0006","case_manager":"Connie Lawrence","insurance_company":"GEICO","injury_type":"Pedestrian/Bicycle","case_stage":"Litigation","money_at_stake":193200.0,"amount_basis":"Estimated (injury median)","firm_fee_at_stake":77280.0,"current_phase":"treatment","phase_name":"Treatment","phase_type":"Clinical","phase_start_date":"2026-02-23","days_in_current_phase":232,"threshold_days":365,"days_over_threshold":0,"pct_of_threshold_used":0.64,"alert_level":"ON TRACK","days_open":232,"intake_date":"2026-02-23","suggested_action":"Check-in con el cliente y proveedores; confirmar fecha estimada de alta/MMI."},{"priority_rank":19,"case_id":"PI-2025-0019","case_manager":"Cristian Santos","insurance_company":"Nationwide","injury_type":"Auto - Spine/Injections","case_stage":"Litigation","money_at_stake":179737.76,"amount_basis":"Estimated (bills x mult)","firm_fee_at_stake":71895.1,"current_phase":"offer_wait","phase_name":"Adjuster Offer Wait","phase_type":"External","phase_start_date":"2026-09-21","days_in_current_phase":22,"threshold_days":60,"days_over_threshold":0,"pct_of_threshold_used":0.37,"alert_level":"ON TRACK","days_open":513,"intake_date":"2025-05-18","suggested_action":"Follow-up al adjuster; escalar al supervisor del carrier si supera el plazo."},{"priority_rank":20,"case_id":"PI-2025-0018","case_manager":"Allison Hill","insurance_company":"Nationwide","injury_type":"Auto - Spine/Injections","case_stage":"Pre-suit","money_at_stake":156400.0,"amount_basis":"Actual settlement","firm_fee_at_stake":51612.0,"current_phase":"reductions_blocking","phase_name":"Reductions Blocking","phase_type":"External","phase_start_date":"2026-10-11","days_in_current_phase":2,"threshold_days":30,"days_over_threshold":0,"pct_of_threshold_used":0.07,"alert_level":"ON TRACK","days_open":513,"intake_date":"2025-05-18","suggested_action":"Cheque en mano: escalar reducciones pendientes con billing/lienholders."},{"priority_rank":21,"case_id":"PI-2026-0009","case_manager":"Noah Rhodes","insurance_company":"State Farm","injury_type":"Slip and Fall","case_stage":"Pre-suit","money_at_stake":155574.23,"amount_basis":"Estimated (bills x mult)","firm_fee_at_stake":51339.5,"current_phase":"demand_prep","phase_name":"Demand Prep","phase_type":"Controllable","phase_start_date":"2026-10-03","days_in_current_phase":10,"threshold_days":21,"days_over_threshold":0,"pct_of_threshold_used":0.48,"alert_level":"ON TRACK","days_open":182,"intake_date":"2026-04-14","suggested_action":"Priorizar el demand package; revisar carga de trabajo del manager."},{"priority_rank":22,"case_id":"PI-2026-0012","case_manager":"Connie Lawrence","insurance_company":"Farmers","injury_type":"Slip and Fall","case_stage":"Pre-suit","money_at_stake":131100.0,"amount_basis":"Estimated (injury median)","firm_fee_at_stake":43263.0,"current_phase":"records_wait","phase_name":"Records Wait","phase_type":"External","phase_start_date":"2026-09-10","days_in_current_phase":33,"threshold_days":60,"days_over_threshold":0,"pct_of_threshold_used":0.55,"alert_level":"ON TRACK","days_open":170,"intake_date":"2026-04-26","suggested_action":"Escalar solicitudes de expedientes y facturas pendientes con cada proveedor."},{"priority_rank":23,"case_id":"PI-2025-0038","case_manager":"Noah Rhodes","insurance_company":"USAA","injury_type":"Auto - Spine/Injections","case_stage":"Pre-suit","money_at_stake":119250.0,"amount_basis":"Estimated (injury median)","firm_fee_at_stake":39352.5,"current_phase":"records_wait","phase_name":"Records Wait","phase_type":"External","phase_start_date":"2026-10-09","days_in_current_phase":4,"threshold_days":60,"days_over_threshold":0,"pct_of_threshold_used":0.07,"alert_level":"ON TRACK","days_open":299,"intake_date":"2025-12-18","suggested_action":"Escalar solicitudes de expedientes y facturas pendientes con cada proveedor."},{"priority_rank":24,"case_id":"PI-2025-0039","case_manager":"Angie Henderson","insurance_company":"Liberty Mutual","injury_type":"Auto - Spine/Injections","case_stage":"Pre-suit","money_at_stake":119250.0,"amount_basis":"Estimated (injury median)","firm_fee_at_stake":39352.5,"current_phase":"treatment","phase_name":"Treatment","phase_type":"Clinical","phase_start_date":"2025-12-22","days_in_current_phase":295,"threshold_days":365,"days_over_threshold":0,"pct_of_threshold_used":0.81,"alert_level":"WATCH","days_open":295,"intake_date":"2025-12-22","suggested_action":"Check-in con el cliente y proveedores; confirmar fecha estimada de alta/MMI."},{"priority_rank":25,"case_id":"PI-2026-0017","case_manager":"Daniel Wagner","insurance_company":"Progressive","injury_type":"Auto - Spine/Injections","case_stage":"Pre-suit","money_at_stake":119250.0,"amount_basis":"Estimated (injury median)","firm_fee_at_stake":39352.5,"current_phase":"treatment","phase_name":"Treatment","phase_type":"Clinical","phase_start_date":"2026-07-16","days_in_current_phase":89,"threshold_days":365,"days_over_threshold":0,"pct_of_threshold_used":0.24,"alert_level":"ON TRACK","days_open":89,"intake_date":"2026-07-16","suggested_action":"Check-in con el cliente y proveedores; confirmar fecha estimada de alta/MMI."},{"priority_rank":26,"case_id":"PI-2026-0019","case_manager":"Allison Hill","insurance_company":"Liberty Mutual","injury_type":"Auto - Spine/Injections","case_stage":"Litigation","money_at_stake":119250.0,"amount_basis":"Estimated (injury median)","firm_fee_at_stake":47700.0,"current_phase":"treatment","phase_name":"Treatment","phase_type":"Clinical","phase_start_date":"2026-08-15","days_in_current_phase":59,"threshold_days":365,"days_over_threshold":0,"pct_of_threshold_used":0.16,"alert_level":"ON TRACK","days_open":59,"intake_date":"2026-08-15","suggested_action":"Check-in con el cliente y proveedores; confirmar fecha estimada de alta/MMI."},{"priority_rank":27,"case_id":"PI-2025-0030","case_manager":"Noah Rhodes","insurance_company":"USAA","injury_type":"Auto - Spine/Injections","case_stage":"Litigation","money_at_stake":104730.53,"amount_basis":"Estimated (bills x mult)","firm_fee_at_stake":41892.21,"current_phase":"demand_prep","phase_name":"Demand Prep","phase_type":"Controllable","phase_start_date":"2026-09-23","days_in_current_phase":20,"threshold_days":21,"days_over_threshold":0,"pct_of_threshold_used":0.95,"alert_level":"WATCH","days_open":423,"intake_date":"2025-08-16","suggested_action":"Priorizar el demand package; revisar carga de trabajo del manager."},{"priority_rank":28,"case_id":"PI-2026-0010","case_manager":"Angie Henderson","insurance_company":"Progressive","injury_type":"Auto - Soft Tissue","case_stage":"Pre-suit","money_at_stake":82392.76,"amount_basis":"Estimated (bills x mult)","firm_fee_at_stake":27189.61,"current_phase":"negotiation","phase_name":"Strategic Negotiation","phase_type":"Strategic","phase_start_date":"2026-10-09","days_in_current_phase":4,"threshold_days":120,"days_over_threshold":0,"pct_of_threshold_used":0.03,"alert_level":"ON TRACK","days_open":176,"intake_date":"2026-04-20","suggested_action":"Revisar estrategia con el abogado: counter, mediación o evaluar litigio."},{"priority_rank":29,"case_id":"PI-2026-0016","case_manager":"Angie Henderson","insurance_company":"Farmers","injury_type":"Dog Bite","case_stage":"Pre-suit","money_at_stake":75425.0,"amount_basis":"Estimated (injury median)","firm_fee_at_stake":24890.25,"current_phase":"records_wait","phase_name":"Records Wait","phase_type":"External","phase_start_date":"2026-09-02","days_in_current_phase":41,"threshold_days":60,"days_over_threshold":0,"pct_of_threshold_used":0.68,"alert_level":"ON TRACK","days_open":92,"intake_date":"2026-07-13","suggested_action":"Escalar solicitudes de expedientes y facturas pendientes con cada proveedor."},{"priority_rank":30,"case_id":"PI-2026-0002","case_manager":"Daniel Wagner","insurance_company":"Liberty Mutual","injury_type":"Auto - Soft Tissue","case_stage":"Pre-suit","money_at_stake":61898.81,"amount_basis":"Estimated (bills x mult)","firm_fee_at_stake":20426.61,"current_phase":"negotiation","phase_name":"Strategic Negotiation","phase_type":"Strategic","phase_start_date":"2026-08-20","days_in_current_phase":54,"threshold_days":120,"days_over_threshold":0,"pct_of_threshold_used":0.45,"alert_level":"ON TRACK","days_open":272,"intake_date":"2026-01-14","suggested_action":"Revisar estrategia con el abogado: counter, mediación o evaluar litigio."},{"priority_rank":31,"case_id":"PI-2026-0004","case_manager":"Cristian Santos","insurance_company":"USAA","injury_type":"Dog Bite","case_stage":"Pre-suit","money_at_stake":46250.0,"amount_basis":"Actual settlement","firm_fee_at_stake":15262.5,"current_phase":"release_execution","phase_name":"Release Execution","phase_type":"Controllable","phase_start_date":"2026-10-13","days_in_current_phase":0,"threshold_days":14,"days_over_threshold":0,"pct_of_threshold_used":0.0,"alert_level":"ON TRACK","days_open":238,"intake_date":"2026-02-17","suggested_action":"Contactar al cliente para firma/notarización; reenviar el Release hoy."},{"priority_rank":32,"case_id":"PI-2026-0011","case_manager":"Allison Hill","insurance_company":"USAA","injury_type":"Auto - Soft Tissue","case_stage":"Pre-suit","money_at_stake":42001.84,"amount_basis":"Estimated (bills x mult)","firm_fee_at_stake":13860.61,"current_phase":"offer_wait","phase_name":"Adjuster Offer Wait","phase_type":"External","phase_start_date":"2026-09-08","days_in_current_phase":35,"threshold_days":60,"days_over_threshold":0,"pct_of_threshold_used":0.58,"alert_level":"ON TRACK","days_open":173,"intake_date":"2026-04-23","suggested_action":"Follow-up al adjuster; escalar al supervisor del carrier si supera el plazo."},{"priority_rank":33,"case_id":"PI-2025-0040","case_manager":"Cristian Santos","insurance_company":"State Farm","injury_type":"Auto - Soft Tissue","case_stage":"Pre-suit","money_at_stake":39250.0,"amount_basis":"Actual settlement","firm_fee_at_stake":12952.5,"current_phase":"reductions_blocking","phase_name":"Reductions Blocking","phase_type":"External","phase_start_date":"2026-09-04","days_in_current_phase":39,"threshold_days":30,"days_over_threshold":9,"pct_of_threshold_used":1.3,"alert_level":"AMBER","days_open":295,"intake_date":"2025-12-22","suggested_action":"Cheque en mano: escalar reducciones pendientes con billing/lienholders."},{"priority_rank":34,"case_id":"PI-2026-0015","case_manager":"Noah Rhodes","insurance_company":"Liberty Mutual","injury_type":"Auto - Soft Tissue","case_stage":"Pre-suit","money_at_stake":37000.0,"amount_basis":"Estimated (injury median)","firm_fee_at_stake":12210.0,"current_phase":"records_wait","phase_name":"Records Wait","phase_type":"External","phase_start_date":"2026-10-01","days_in_current_phase":12,"threshold_days":60,"days_over_threshold":0,"pct_of_threshold_used":0.2,"alert_level":"ON TRACK","days_open":120,"intake_date":"2026-06-15","suggested_action":"Escalar solicitudes de expedientes y facturas pendientes con cada proveedor."},{"priority_rank":35,"case_id":"PI-2026-0013","case_manager":"Allison Hill","insurance_company":"State Farm","injury_type":"Auto - Soft Tissue","case_stage":"Pre-suit","money_at_stake":30962.28,"amount_basis":"Estimated (bills x mult)","firm_fee_at_stake":10217.55,"current_phase":"offer_wait","phase_name":"Adjuster Offer Wait","phase_type":"External","phase_start_date":"2026-10-02","days_in_current_phase":11,"threshold_days":60,"days_over_threshold":0,"pct_of_threshold_used":0.18,"alert_level":"ON TRACK","days_open":132,"intake_date":"2026-06-03","suggested_action":"Follow-up al adjuster; escalar al supervisor del carrier si supera el plazo."},{"priority_rank":36,"case_id":"PI-2026-0008","case_manager":"Daniel Wagner","insurance_company":"Progressive","injury_type":"Auto - Soft Tissue","case_stage":"Pre-suit","money_at_stake":30586.72,"amount_basis":"Estimated (bills x mult)","firm_fee_at_stake":10093.62,"current_phase":"negotiation","phase_name":"Strategic Negotiation","phase_type":"Strategic","phase_start_date":"2026-09-26","days_in_current_phase":17,"threshold_days":120,"days_over_threshold":0,"pct_of_threshold_used":0.14,"alert_level":"ON TRACK","days_open":184,"intake_date":"2026-04-12","suggested_action":"Revisar estrategia con el abogado: counter, mediación o evaluar litigio."}],"detail":{"PI-2026-0016":{"treatment_days":51,"records_wait_days":null,"demand_prep_days":null,"offer_wait_days":null,"negotiation_days":null,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2024-0073":{"treatment_days":393,"records_wait_days":118,"demand_prep_days":14,"offer_wait_days":30,"negotiation_days":69,"release_execution_days":20,"carrier_check_wait_days":28,"reductions_blocking_days":1,"disbursement_prep_days":null},"PI-2024-0075":{"treatment_days":383,"records_wait_days":101,"demand_prep_days":22,"offer_wait_days":65,"negotiation_days":null,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2024-0076":{"treatment_days":573,"records_wait_days":56,"demand_prep_days":21,"offer_wait_days":null,"negotiation_days":null,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2025-0010":{"treatment_days":304,"records_wait_days":64,"demand_prep_days":4,"offer_wait_days":75,"negotiation_days":126,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2025-0014":{"treatment_days":341,"records_wait_days":101,"demand_prep_days":11,"offer_wait_days":31,"negotiation_days":55,"release_execution_days":7,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2025-0016":{"treatment_days":440,"records_wait_days":38,"demand_prep_days":6,"offer_wait_days":36,"negotiation_days":null,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2025-0017":{"treatment_days":366,"records_wait_days":51,"demand_prep_days":13,"offer_wait_days":29,"negotiation_days":43,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2025-0018":{"treatment_days":333,"records_wait_days":63,"demand_prep_days":5,"offer_wait_days":36,"negotiation_days":59,"release_execution_days":7,"carrier_check_wait_days":8,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2025-0019":{"treatment_days":420,"records_wait_days":51,"demand_prep_days":20,"offer_wait_days":null,"negotiation_days":null,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2025-0022":{"treatment_days":280,"records_wait_days":74,"demand_prep_days":14,"offer_wait_days":80,"negotiation_days":45,"release_execution_days":8,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2025-0027":{"treatment_days":393,"records_wait_days":9,"demand_prep_days":16,"offer_wait_days":null,"negotiation_days":null,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2025-0030":{"treatment_days":385,"records_wait_days":18,"demand_prep_days":null,"offer_wait_days":null,"negotiation_days":null,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2025-0031":{"treatment_days":null,"records_wait_days":null,"demand_prep_days":null,"offer_wait_days":null,"negotiation_days":null,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2025-0034":{"treatment_days":null,"records_wait_days":null,"demand_prep_days":null,"offer_wait_days":null,"negotiation_days":null,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2025-0038":{"treatment_days":295,"records_wait_days":null,"demand_prep_days":null,"offer_wait_days":null,"negotiation_days":null,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2025-0039":{"treatment_days":null,"records_wait_days":null,"demand_prep_days":null,"offer_wait_days":null,"negotiation_days":null,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2025-0040":{"treatment_days":134,"records_wait_days":24,"demand_prep_days":22,"offer_wait_days":21,"negotiation_days":37,"release_execution_days":6,"carrier_check_wait_days":12,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2026-0002":{"treatment_days":100,"records_wait_days":33,"demand_prep_days":18,"offer_wait_days":67,"negotiation_days":null,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2026-0003":{"treatment_days":221,"records_wait_days":18,"demand_prep_days":null,"offer_wait_days":null,"negotiation_days":null,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2026-0004":{"treatment_days":131,"records_wait_days":17,"demand_prep_days":12,"offer_wait_days":30,"negotiation_days":48,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2026-0005":{"treatment_days":null,"records_wait_days":null,"demand_prep_days":null,"offer_wait_days":null,"negotiation_days":null,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2026-0006":{"treatment_days":null,"records_wait_days":null,"demand_prep_days":null,"offer_wait_days":null,"negotiation_days":null,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2026-0007":{"treatment_days":null,"records_wait_days":null,"demand_prep_days":null,"offer_wait_days":null,"negotiation_days":null,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2026-0008":{"treatment_days":116,"records_wait_days":10,"demand_prep_days":16,"offer_wait_days":25,"negotiation_days":null,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2026-0009":{"treatment_days":135,"records_wait_days":37,"demand_prep_days":null,"offer_wait_days":null,"negotiation_days":null,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2026-0010":{"treatment_days":47,"records_wait_days":72,"demand_prep_days":13,"offer_wait_days":40,"negotiation_days":null,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2026-0011":{"treatment_days":87,"records_wait_days":38,"demand_prep_days":13,"offer_wait_days":null,"negotiation_days":null,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2026-0012":{"treatment_days":137,"records_wait_days":null,"demand_prep_days":null,"offer_wait_days":null,"negotiation_days":null,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2026-0013":{"treatment_days":77,"records_wait_days":38,"demand_prep_days":6,"offer_wait_days":null,"negotiation_days":null,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2026-0014":{"treatment_days":null,"records_wait_days":null,"demand_prep_days":null,"offer_wait_days":null,"negotiation_days":null,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2026-0015":{"treatment_days":108,"records_wait_days":null,"demand_prep_days":null,"offer_wait_days":null,"negotiation_days":null,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2026-0017":{"treatment_days":null,"records_wait_days":null,"demand_prep_days":null,"offer_wait_days":null,"negotiation_days":null,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2026-0018":{"treatment_days":null,"records_wait_days":null,"demand_prep_days":null,"offer_wait_days":null,"negotiation_days":null,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2026-0019":{"treatment_days":null,"records_wait_days":null,"demand_prep_days":null,"offer_wait_days":null,"negotiation_days":null,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null},"PI-2026-0020":{"treatment_days":null,"records_wait_days":null,"demand_prep_days":null,"offer_wait_days":null,"negotiation_days":null,"release_execution_days":null,"carrier_check_wait_days":null,"reductions_blocking_days":null,"disbursement_prep_days":null}},"phase_summary":[{"phase_key":"treatment","phase_name":"Treatment","phase_type":"Clinical","avg_days":239.3,"median_days":210.5,"p90_days":442.1},{"phase_key":"records_wait","phase_name":"Records Wait","phase_type":"External","avg_days":42.2,"median_days":36.0,"p90_days":71.0},{"phase_key":"demand_prep","phase_name":"Demand Prep","phase_type":"Controllable","avg_days":15.8,"median_days":14.0,"p90_days":25.7},{"phase_key":"offer_wait","phase_name":"Adjuster Offer Wait","phase_type":"External","avg_days":46.8,"median_days":44.0,"p90_days":75.7},{"phase_key":"negotiation","phase_name":"Strategic Negotiation","phase_type":"Strategic","avg_days":74.9,"median_days":58.0,"p90_days":164.7},{"phase_key":"release_execution","phase_name":"Release Execution","phase_type":"Controllable","avg_days":12.4,"median_days":10.0,"p90_days":19.0},{"phase_key":"carrier_check_wait","phase_name":"Carrier Check Wait","phase_type":"External","avg_days":17.0,"median_days":14.0,"p90_days":28.7},{"phase_key":"reductions_blocking","phase_name":"Reductions Blocking","phase_type":"External","avg_days":13.4,"median_days":3.0,"p90_days":38.4},{"phase_key":"disbursement_prep","phase_name":"Disbursement Prep","phase_type":"Controllable","avg_days":6.7,"median_days":6.0,"p90_days":10.0}],"managers":[{"rank_fastest":1,"case_manager":"Allison Hill","closed_cases":32,"median_demand_prep_days":11.0,"median_release_execution_days":9.0,"median_disbursement_prep_days":6.0,"median_controllable_days":26.0,"p90_controllable_days":36.7,"firm_median_controllable_days":32.0,"controllable_vs_firm_pct":-0.1875,"performance_flag":"In line","sample_flag":"OK","avg_total_cycle_days":478.0,"bills_savings_pct":0.4442,"liens_savings_pct":0.0867,"open_cases":8,"open_red_alerts":0,"open_amber_alerts":0,"open_watch_alerts":1,"open_money_at_stake":1677851.85},{"rank_fastest":2,"case_manager":"Noah Rhodes","closed_cases":31,"median_demand_prep_days":13.0,"median_release_execution_days":10.0,"median_disbursement_prep_days":5.0,"median_controllable_days":29.0,"p90_controllable_days":53.0,"firm_median_controllable_days":32.0,"controllable_vs_firm_pct":-0.0938,"performance_flag":"In line","sample_flag":"OK","avg_total_cycle_days":438.7,"bills_savings_pct":0.3564,"liens_savings_pct":0.0955,"open_cases":8,"open_red_alerts":0,"open_amber_alerts":0,"open_watch_alerts":1,"open_money_at_stake":1815906.22},{"rank_fastest":3,"case_manager":"Connie Lawrence","closed_cases":18,"median_demand_prep_days":15.0,"median_release_execution_days":10.0,"median_disbursement_prep_days":5.5,"median_controllable_days":31.5,"p90_controllable_days":51.0,"firm_median_controllable_days":32.0,"controllable_vs_firm_pct":-0.0156,"performance_flag":"In line","sample_flag":"OK","avg_total_cycle_days":518.4,"bills_savings_pct":0.4026,"liens_savings_pct":0.1116,"open_cases":2,"open_red_alerts":0,"open_amber_alerts":0,"open_watch_alerts":0,"open_money_at_stake":324300.0},{"rank_fastest":4,"case_manager":"Angie Henderson","closed_cases":33,"median_demand_prep_days":13.0,"median_release_execution_days":10.0,"median_disbursement_prep_days":6.0,"median_controllable_days":32.0,"p90_controllable_days":50.6,"firm_median_controllable_days":32.0,"controllable_vs_firm_pct":0.0,"performance_flag":"In line","sample_flag":"OK","avg_total_cycle_days":468.5,"bills_savings_pct":0.3691,"liens_savings_pct":0.0508,"open_cases":5,"open_red_alerts":0,"open_amber_alerts":0,"open_watch_alerts":1,"open_money_at_stake":813967.76},{"rank_fastest":5,"case_manager":"Daniel Wagner","closed_cases":26,"median_demand_prep_days":15.0,"median_release_execution_days":10.0,"median_disbursement_prep_days":6.0,"median_controllable_days":35.5,"p90_controllable_days":43.0,"firm_median_controllable_days":32.0,"controllable_vs_firm_pct":0.1094,"performance_flag":"In line","sample_flag":"OK","avg_total_cycle_days":491.1,"bills_savings_pct":0.3762,"liens_savings_pct":0.1091,"open_cases":9,"open_red_alerts":0,"open_amber_alerts":2,"open_watch_alerts":0,"open_money_at_stake":2524915.37},{"rank_fastest":6,"case_manager":"Cristian Santos","closed_cases":24,"median_demand_prep_days":20.5,"median_release_execution_days":11.0,"median_disbursement_prep_days":8.0,"median_controllable_days":42.0,"p90_controllable_days":70.8,"firm_median_controllable_days":32.0,"controllable_vs_firm_pct":0.3125,"performance_flag":"SLOWER than firm","sample_flag":"OK","avg_total_cycle_days":432.8,"bills_savings_pct":0.3453,"liens_savings_pct":0.0757,"open_cases":4,"open_red_alerts":0,"open_amber_alerts":2,"open_watch_alerts":0,"open_money_at_stake":705662.76}],"carriers":[{"insurance_company":"Progressive","closed_cases":33,"median_offer_wait_days":39.0,"p90_offer_wait_days":67.6,"firm_median_offer_wait_days":44.0,"offer_wait_vs_firm_pct":-0.1136,"offer_wait_flag":"In line","median_negotiation_days":44.0,"median_check_wait_days":13.0,"p90_check_wait_days":17.8,"firm_median_check_wait_days":14.0,"check_wait_vs_firm_pct":-0.0714,"check_wait_flag":"In line","pct_checks_over_threshold":0.0909,"pct_litigation":0.4242,"sample_flag":"OK","avg_settlement_amount":288290.91,"total_settlement_amount":9513600.0,"open_cases":5,"open_red_alerts":0,"open_amber_alerts":0,"open_watch_alerts":0},{"insurance_company":"State Farm","closed_cases":32,"median_offer_wait_days":38.0,"p90_offer_wait_days":70.9,"firm_median_offer_wait_days":44.0,"offer_wait_vs_firm_pct":-0.1364,"offer_wait_flag":"In line","median_negotiation_days":54.5,"median_check_wait_days":16.5,"p90_check_wait_days":33.9,"firm_median_check_wait_days":14.0,"check_wait_vs_firm_pct":0.1786,"check_wait_flag":"In line","pct_checks_over_threshold":0.2813,"pct_litigation":0.1875,"sample_flag":"OK","avg_settlement_amount":141451.56,"total_settlement_amount":4526450.0,"open_cases":6,"open_red_alerts":0,"open_amber_alerts":2,"open_watch_alerts":0},{"insurance_company":"Farmers","closed_cases":17,"median_offer_wait_days":44.0,"p90_offer_wait_days":87.4,"firm_median_offer_wait_days":44.0,"offer_wait_vs_firm_pct":0.0,"offer_wait_flag":"In line","median_negotiation_days":67.0,"median_check_wait_days":17.0,"p90_check_wait_days":27.8,"firm_median_check_wait_days":14.0,"check_wait_vs_firm_pct":0.2143,"check_wait_flag":"SLOWER than firm","pct_checks_over_threshold":0.3529,"pct_litigation":0.4118,"sample_flag":"OK","avg_settlement_amount":257091.18,"total_settlement_amount":4370550.0,"open_cases":6,"open_red_alerts":0,"open_amber_alerts":0,"open_watch_alerts":0},{"insurance_company":"GEICO","closed_cases":22,"median_offer_wait_days":51.0,"p90_offer_wait_days":68.7,"firm_median_offer_wait_days":44.0,"offer_wait_vs_firm_pct":0.1591,"offer_wait_flag":"In line","median_negotiation_days":70.5,"median_check_wait_days":19.0,"p90_check_wait_days":35.9,"firm_median_check_wait_days":14.0,"check_wait_vs_firm_pct":0.3571,"check_wait_flag":"SLOWER than firm","pct_checks_over_threshold":0.3636,"pct_litigation":0.3636,"sample_flag":"OK","avg_settlement_amount":185875.0,"total_settlement_amount":4089250.0,"open_cases":5,"open_red_alerts":0,"open_amber_alerts":2,"open_watch_alerts":0},{"insurance_company":"Allstate","closed_cases":14,"median_offer_wait_days":54.5,"p90_offer_wait_days":82.3,"firm_median_offer_wait_days":44.0,"offer_wait_vs_firm_pct":0.2386,"offer_wait_flag":"SLOWER than firm","median_negotiation_days":63.5,"median_check_wait_days":18.5,"p90_check_wait_days":26.8,"firm_median_check_wait_days":14.0,"check_wait_vs_firm_pct":0.3214,"check_wait_flag":"SLOWER than firm","pct_checks_over_threshold":0.3571,"pct_litigation":0.1429,"sample_flag":"Low sample","avg_settlement_amount":286267.86,"total_settlement_amount":4007750.0,"open_cases":3,"open_red_alerts":0,"open_amber_alerts":0,"open_watch_alerts":1},{"insurance_company":"Liberty Mutual","closed_cases":13,"median_offer_wait_days":51.0,"p90_offer_wait_days":75.8,"firm_median_offer_wait_days":44.0,"offer_wait_vs_firm_pct":0.1591,"offer_wait_flag":"In line","median_negotiation_days":61.0,"median_check_wait_days":13.0,"p90_check_wait_days":22.4,"firm_median_check_wait_days":14.0,"check_wait_vs_firm_pct":-0.0714,"check_wait_flag":"In line","pct_checks_over_threshold":0.1538,"pct_litigation":0.3077,"sample_flag":"Low sample","avg_settlement_amount":204950.0,"total_settlement_amount":2664350.0,"open_cases":4,"open_red_alerts":0,"open_amber_alerts":0,"open_watch_alerts":1},{"insurance_company":"USAA","closed_cases":16,"median_offer_wait_days":38.5,"p90_offer_wait_days":57.5,"firm_median_offer_wait_days":44.0,"offer_wait_vs_firm_pct":-0.125,"offer_wait_flag":"In line","median_negotiation_days":66.0,"median_check_wait_days":11.5,"p90_check_wait_days":25.0,"firm_median_check_wait_days":14.0,"check_wait_vs_firm_pct":-0.1786,"check_wait_flag":"In line","pct_checks_over_threshold":0.1875,"pct_litigation":0.1875,"sample_flag":"OK","avg_settlement_amount":162506.25,"total_settlement_amount":2600100.0,"open_cases":5,"open_red_alerts":0,"open_amber_alerts":0,"open_watch_alerts":1},{"insurance_company":"Nationwide","closed_cases":9,"median_offer_wait_days":41.0,"p90_offer_wait_days":76.2,"firm_median_offer_wait_days":44.0,"offer_wait_vs_firm_pct":-0.0682,"offer_wait_flag":"In line","median_negotiation_days":46.0,"median_check_wait_days":14.0,"p90_check_wait_days":22.4,"firm_median_check_wait_days":14.0,"check_wait_vs_firm_pct":0.0,"check_wait_flag":"In line","pct_checks_over_threshold":0.1111,"pct_litigation":0.3333,"sample_flag":"Low sample","avg_settlement_amount":205350.0,"total_settlement_amount":1848150.0,"open_cases":2,"open_red_alerts":0,"open_amber_alerts":0,"open_watch_alerts":0},{"insurance_company":"Travelers","closed_cases":8,"median_offer_wait_days":39.5,"p90_offer_wait_days":57.9,"firm_median_offer_wait_days":44.0,"offer_wait_vs_firm_pct":-0.1023,"offer_wait_flag":"In line","median_negotiation_days":58.5,"median_check_wait_days":14.5,"p90_check_wait_days":25.2,"firm_median_check_wait_days":14.0,"check_wait_vs_firm_pct":0.0357,"check_wait_flag":"In line","pct_checks_over_threshold":0.25,"pct_litigation":0.375,"sample_flag":"Low sample","avg_settlement_amount":163843.75,"total_settlement_amount":1310750.0,"open_cases":0,"open_red_alerts":0,"open_amber_alerts":0,"open_watch_alerts":0}],"closed_cases":164};   // <- datos de PostgreSQL inyectados por python/03_build_dashboard.py
+(function () {
+"use strict";
+if (!D) { document.body.innerHTML = "<p style='padding:24px'>This file is a template. Run <code>python python/03_build_dashboard.py</code> to build <code>dashboard/index.html</code>.</p>"; return; }
+
+/* ───────────────────────── constantes ───────────────────────── */
+const LEVELS = ["RED", "AMBER", "WATCH", "ON TRACK"];
+const LCOLOR = { "RED": "var(--red)", "AMBER": "var(--amber)", "WATCH": "var(--watch)", "ON TRACK": "var(--ok)" };
+const lcls = l => l.replace(" ", "-");
+const PHASES = [["treatment", "Treatment", "Clinical"], ["records_wait", "Records Wait", "External"],
+  ["demand_prep", "Demand Prep", "Controllable"], ["offer_wait", "Adjuster Offer Wait", "External"],
+  ["negotiation", "Strategic Negotiation", "Strategic"], ["release_execution", "Release Execution", "Controllable"],
+  ["carrier_check_wait", "Carrier Check Wait", "External"], ["reductions_blocking", "Reductions Blocking", "External"],
+  ["disbursement_prep", "Disbursement Prep", "Controllable"]];
+const PNAMES = PHASES.map(p => p[1]);
+const ACTIONS = {
+  treatment: "Check in with the client and providers; confirm the expected discharge / MMI date.",
+  records_wait: "Escalate outstanding record and billing requests provider by provider.",
+  demand_prep: "Prioritize the demand package; review the case manager's workload.",
+  offer_wait: "Follow up with the adjuster; escalate to the carrier's supervisor if past the window.",
+  negotiation: "Review strategy with the attorney: counter, mediation, or evaluate filing suit.",
+  release_execution: "Call the client to complete signing / notarization; resend the release today.",
+  carrier_check_wait: "Confirm the carrier received the signed release and get a check issue date.",
+  reductions_blocking: "The check is in hand: escalate pending reductions with billing departments and lienholders.",
+  disbursement_prep: "Finalize the closing statement and issue the client's payment."
+};
+const SORTS = ["Money at stake", "Severity, then money", "Days over threshold"];
+const BASIS = ["All", "Accepted settlement only", "Estimated only"];
+const DIMS = [["manager", "Case manager", r => r.case_manager], ["carrier", "Insurance carrier", r => r.insurance_company],
+  ["injury", "Injury type", r => r.injury_type], ["stage", "Case stage", r => r.case_stage],
+  ["phase", "Current phase", r => r.phase_name], ["level", "Alert level", r => r.level]];
+const P = D.params;
+
+/* ───────────────────────── utilidades ───────────────────────── */
+const $ = (s, root = document) => root.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const usd = x => Math.abs(x) >= 1e6 ? "$" + (x / 1e6).toFixed(1) + "M" : Math.abs(x) >= 1e3 ? "$" + Math.round(x / 1e3) + "K" : "$" + Math.round(x).toLocaleString("en-US");
+const usd2 = x => "$" + (x / 1e6).toFixed(2) + "M";
+const pct0 = x => Math.round(x * 100) + "%";
+const spct = x => (x >= 0 ? "+" : "") + Math.round(x * 100) + "%";
+const fdate = iso => new Date(iso + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
+const shortFlag = f => ({ "SLOWER than firm": "Slower", "FASTER than firm": "Faster", "In line": "In line" }[f] || "n/a");
+const dot = l => `<span class="dot ${lcls(l)}"></span>`;
+const sum = (a, f) => a.reduce((t, x) => t + f(x), 0);
+function niceTicks(max, n = 5) {
+  const step0 = max / n, mag = Math.pow(10, Math.floor(Math.log10(step0))), norm = step0 / mag;
+  const step = (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10) * mag, out = [];
+  for (let v = 0; v <= max + 1e-9; v += step) out.push(v);
+  return out;
+}
+
+/* ───────────────────────── estado ───────────────────────── */
+const freshState = () => ({
+  sel: { manager: new Set(), carrier: new Set(), injury: new Set(), stage: new Set(), phase: new Set(), level: new Set() },
+  basis: BASIS[0], minMoney: 0, sort: SORTS[0], custom: false, scale: 100,
+  watch: Math.round(P.watch * 100), red: P.red
+});
+let S = Object.assign(freshState(), { tab: "queue", selected: null });
+const maxMoneyK = Math.floor(Math.max(...D.alerts.map(a => a.money_at_stake)) / 1000) + 1;
+
+/* ───────────────────────── lógica de alertas (misma regla que pi.v_open_case_alerts) ───────────────────────── */
+function classify() {
+  const scale = S.custom ? S.scale / 100 : 1, watch = S.custom ? S.watch / 100 : P.watch, red = S.custom ? S.red : P.red;
+  return D.alerts.map(r => {
+    const thr = r.threshold_days * scale, d = r.days_in_current_phase;
+    const level = d > thr * red ? "RED" : d > thr ? "AMBER" : d >= thr * watch ? "WATCH" : "ON TRACK";
+    return Object.assign({}, r, { thr, pct: d / thr * 100, over: Math.max(0, d - thr), level, flagged: level !== "ON TRACK" });
+  });
+}
+function applyFilters(rows) {
+  return rows.filter(r => {
+    for (const [k, , get] of DIMS) { const s = S.sel[k]; if (s.size && !s.has(get(r))) return false; }
+    if (S.basis === BASIS[1] && r.amount_basis !== "Actual settlement") return false;
+    if (S.basis === BASIS[2] && r.amount_basis === "Actual settlement") return false;
+    return r.money_at_stake >= S.minMoney * 1000;
+  });
+}
+function sortRows(rows) {
+  const sev = l => LEVELS.indexOf(l), byId = (a, b) => a.case_id.localeCompare(b.case_id);
+  const f = S.sort === SORTS[1] ? (a, b) => sev(a.level) - sev(b.level) || b.money_at_stake - a.money_at_stake || byId(a, b)
+          : S.sort === SORTS[2] ? (a, b) => b.over - a.over || b.money_at_stake - a.money_at_stake || byId(a, b)
+          : (a, b) => b.money_at_stake - a.money_at_stake || b.over - a.over || byId(a, b);
+  return rows.slice().sort(f);
+}
+
+/* ───────────────────────── barra lateral ───────────────────────── */
+function buildSidebar() {
+  const sb = $("#sidebar");
+  let h = "<h2>Filters</h2>";
+  for (const [k, label, get] of DIMS) {
+    const opts = k === "level" ? LEVELS : k === "phase" ? PNAMES : [...new Set(D.alerts.map(get))].sort();
+    h += `<div class="field"><span class="lab">${label}</span><details class="ms" data-k="${k}"><summary><span class="sv">All</span></summary><div class="opts">` +
+         opts.map(o => `<label><input type="checkbox" value="${esc(o)}">${k === "level" ? dot(o) : ""}${esc(o)}</label>`).join("") + "</div></details></div>";
+  }
+  h += `<div class="field radio"><span class="lab">Amount type</span>` +
+       BASIS.map((b, i) => `<label><input type="radio" name="basis" value="${i}"> ${b}</label>`).join("") + "</div>";
+  h += `<div class="field"><label for="minmoney">Min. money at stake ($K) <span class="rv" id="mmv">0</span></label>
+        <input type="range" id="minmoney" min="0" max="${maxMoneyK}" step="25" value="0"></div>`;
+  h += `<div class="field"><label for="sort">Sort queue by</label><select id="sort">${SORTS.map(s => `<option>${s}</option>`).join("")}</select></div><hr>`;
+  h += `<label class="switch"><input type="checkbox" id="custom"><span>What-if: customize alert thresholds<br><span class="muted small">Recalculates alerts in this page only; the database is not modified.</span></span></label>
+        <div id="whatif" hidden style="margin-top:12px">
+          <div class="field"><label for="scale">Scale all thresholds (%) <span class="rv" id="scv"></span></label><input type="range" id="scale" min="50" max="200" step="5"></div>
+          <div class="field"><label for="watch">WATCH starts at (% of threshold) <span class="rv" id="wav"></span></label><input type="range" id="watch" min="50" max="95" step="5"></div>
+          <div class="field"><label for="red">RED starts at (× threshold) <span class="rv" id="rdv"></span></label><input type="range" id="red" min="1.1" max="3" step="0.1"></div>
+        </div><hr>
+        <div class="btns"><button class="btn" id="reset">↺ Reset filters</button></div>`;
+  sb.innerHTML = h;
+
+  sb.addEventListener("change", e => {
+    const t = e.target;
+    const det = t.closest("details.ms");
+    if (det && t.type === "checkbox") { const set = S.sel[det.dataset.k]; t.checked ? set.add(t.value) : set.delete(t.value); }
+    else if (t.name === "basis") S.basis = BASIS[+t.value];
+    else if (t.id === "sort") S.sort = t.value;
+    else if (t.id === "custom") S.custom = t.checked;
+    syncSidebar(); update();
+  });
+  sb.addEventListener("input", e => {
+    const t = e.target;
+    if (t.id === "minmoney") S.minMoney = +t.value;
+    else if (t.id === "scale") S.scale = +t.value;
+    else if (t.id === "watch") S.watch = +t.value;
+    else if (t.id === "red") S.red = +t.value;
+    else return;
+    syncSidebar(); update();
+  });
+  $("#reset").addEventListener("click", () => { S = Object.assign(freshState(), { tab: S.tab, selected: S.selected }); syncSidebar(); update(); });
+}
+function syncSidebar() {
+  for (const d of document.querySelectorAll("details.ms")) {
+    const set = S.sel[d.dataset.k];
+    d.querySelectorAll("input").forEach(i => { i.checked = set.has(i.value); });
+    $(".sv", d).textContent = set.size ? set.size + " selected" : "All";
+  }
+  document.querySelectorAll("input[name=basis]").forEach(i => { i.checked = BASIS[+i.value] === S.basis; });
+  $("#minmoney").value = S.minMoney; $("#mmv").textContent = S.minMoney;
+  $("#sort").value = S.sort; $("#custom").checked = S.custom; $("#whatif").hidden = !S.custom;
+  $("#scale").value = S.scale; $("#scv").textContent = S.scale;
+  $("#watch").value = S.watch; $("#wav").textContent = S.watch;
+  $("#red").value = S.red; $("#rdv").textContent = (+S.red).toFixed(1);
+}
+
+/* ───────────────────────── gráficos SVG ───────────────────────── */
+function phaseChart(c, det) {
+  const med = Object.fromEntries(D.phase_summary.map(p => [p.phase_key, p.median_days]));
+  const rows = PHASES.map(([k, name]) => {
+    let days = null, status = "Not reached";
+    if (k === c.current_phase) { days = c.days_in_current_phase; status = "In progress"; }
+    else if (det && det[k + "_days"] != null) { days = det[k + "_days"]; status = "Completed"; }
+    return { k, name, days, status, median: med[k] };
+  });
+  const W = 640, rh = 29, L = 142, R = 18, T = 6, B = 40, H = T + rows.length * rh + B;
+  const maxV = Math.max(...rows.map(r => Math.max(r.days || 0, r.median || 0)), c.thr) * 1.06;
+  const x = v => L + (W - L - R) * v / maxV;
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Days per phase for ${esc(c.case_id)} versus firm median">`;
+  for (const t of niceTicks(maxV)) s += `<line x1="${x(t)}" x2="${x(t)}" y1="${T}" y2="${T + rows.length * rh}" stroke="var(--grid)"/>` +
+      `<text x="${x(t)}" y="${T + rows.length * rh + 14}" text-anchor="middle">${t}</text>`;
+  s += `<text x="${(L + W - R) / 2}" y="${H - 6}" text-anchor="middle">Days</text>`;
+  rows.forEach((r, i) => {
+    const y = T + i * rh, cy = y + rh / 2;
+    s += `<text x="${L - 8}" y="${cy + 4}" text-anchor="end" class="${r.k === c.current_phase ? "strong" : ""}">${esc(r.name)}</text>`;
+    if (r.days != null) {
+      const col = r.status === "In progress" ? LCOLOR[c.level] : "var(--teal)";
+      s += `<rect x="${L}" y="${y + 6}" width="${Math.max(1, x(r.days) - L)}" height="${rh - 12}" rx="2" fill="${col}" data-tip="${esc(r.name + "\n" + r.status + ": " + r.days + " days\nFirm median: " + r.median.toFixed(1) + " days")}"/>`;
+    }
+    s += `<line x1="${x(r.median)}" x2="${x(r.median)}" y1="${y + 3}" y2="${y + rh - 3}" stroke="var(--text)" stroke-width="2.4" data-tip="${esc(r.name + "\nFirm median: " + r.median.toFixed(1) + " days")}"/>`;
+    if (r.k === c.current_phase) s += `<path d="M${x(c.thr)} ${cy - 7} l6 7 l-6 7 l-6 -7 z" fill="var(--text)" data-tip="${esc("Alert threshold: " + c.thr.toFixed(0) + " days")}"/>`;
+  });
+  return s + "</svg>" + `<div class="legend"><span style="--c:var(--teal)">Completed</span><span style="--c:${LCOLOR[c.level]}">In progress</span></div>` +
+    `<div class="small muted">Bars = this case · vertical tick = firm median (closed cases) · ◆ = alert threshold of the current phase</div>`;
+}
+
+function riskMap(rows) {
+  const W = 920, H = 400, L = 62, R = 24, T = 26, B = 52;
+  const watch = S.custom ? S.watch : P.watch * 100, red = S.custom ? S.red * 100 : P.red * 100;
+  const xmax = Math.max(150, Math.ceil(Math.max(...rows.map(r => r.pct)) / 10) * 10 * 1.05);
+  const ymax = Math.max(...rows.map(r => r.money_at_stake / 1000)) * 1.12;
+  const x = v => L + (W - L - R) * v / xmax, y = v => T + (H - T - B) * (1 - v / ymax);
+  const mmax = Math.max(...rows.map(r => r.money_at_stake));
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Money at stake versus share of alert threshold used">`;
+  for (const t of niceTicks(ymax)) s += `<line x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}" stroke="var(--grid)"/><text x="${L - 8}" y="${y(t) + 4}" text-anchor="end">${t}</text>`;
+  for (const t of niceTicks(xmax, 8)) s += `<line x1="${x(t)}" x2="${x(t)}" y1="${T}" y2="${H - B}" stroke="var(--grid)"/><text x="${x(t)}" y="${H - B + 15}" text-anchor="middle">${t}</text>`;
+  s += `<text x="${(L + W - R) / 2}" y="${H - 8}" text-anchor="middle">% of alert threshold used (days in phase ÷ threshold)</text>`;
+  s += `<text transform="translate(14 ${(T + H - B) / 2}) rotate(-90)" text-anchor="middle">Money at stake ($K)</text>`;
+  for (const [v, lab] of [[watch, "WATCH"], [100, "AMBER"], [red, "RED"]])
+    s += `<line x1="${x(v)}" x2="${x(v)}" y1="${T - 6}" y2="${H - B}" stroke="var(--muted)" stroke-dasharray="5 4"/><text x="${x(v) + 4}" y="${T + 4}">${lab}</text>`;
+  const order = rows.slice().sort((a, b) => LEVELS.indexOf(b.level) - LEVELS.indexOf(a.level));   // las alertas se dibujan encima
+  for (const r of order) {
+    const rad = 5 + 15 * Math.sqrt(r.money_at_stake / mmax);
+    s += `<circle cx="${x(r.pct)}" cy="${y(r.money_at_stake / 1000)}" r="${rad.toFixed(1)}" fill="${LCOLOR[r.level]}" fill-opacity=".85" stroke="var(--panel)" stroke-width="1.2" data-id="${esc(r.case_id)}" ` +
+         `data-tip="${esc(r.case_id + " · " + r.level + "\n" + r.case_manager + " · " + r.insurance_company + "\n" + r.phase_name + ": " + r.days_in_current_phase + " d (" + Math.round(r.pct) + "% of " + r.thr.toFixed(0) + " d)\nAt stake: " + usd(r.money_at_stake))}"/>`;
+  }
+  s += "</svg>" + `<div class="legend">${LEVELS.map(l => `<span style="--c:${LCOLOR[l]}">${l}</span>`).join("")}</div>`;
+  return s;
+}
+
+/* barras apiladas horizontales por nivel de alerta: cats = [{label, parts:{RED,AMBER,WATCH,'ON TRACK'}}] */
+function stacked(cats, unit) {
+  const W = 520, rh = 27, L = 150, R = 56, T = 4, B = 26, H = T + cats.length * rh + B;
+  const tot = c => sum(LEVELS, l => c.parts[l] || 0), maxV = Math.max(...cats.map(tot), 1);
+  const x = v => L + (W - L - R) * v / maxV;
+  let s = `<svg viewBox="0 0 ${W} ${H}">`;
+  for (const t of niceTicks(maxV, 4)) s += `<line x1="${x(t)}" x2="${x(t)}" y1="${T}" y2="${T + cats.length * rh}" stroke="var(--grid)"/><text x="${x(t)}" y="${H - 8}" text-anchor="middle">${unit === "$" ? usd(t) : t}</text>`;
+  cats.forEach((c, i) => {
+    const y = T + i * rh; let acc = 0;
+    s += `<text x="${L - 8}" y="${y + rh / 2 + 4}" text-anchor="end">${esc(c.label)}</text>`;
+    for (const l of LEVELS) {
+      const v = c.parts[l] || 0; if (!v) continue;
+      s += `<rect x="${x(acc)}" y="${y + 5}" width="${Math.max(1, x(acc + v) - x(acc))}" height="${rh - 10}" fill="${LCOLOR[l]}" data-tip="${esc(c.label + "\n" + l + ": " + (unit === "$" ? usd(v) : v + " case" + (v > 1 ? "s" : "")))}"/>`;
+      acc += v;
+    }
+    s += `<text x="${x(acc) + 6}" y="${y + rh / 2 + 4}" class="strong">${unit === "$" ? usd(acc) : acc}</text>`;
+  });
+  return s + "</svg>";
+}
+const groupLevels = (rows, keyFn, valFn) => { const m = new Map(); for (const r of rows) { const k = keyFn(r); if (!m.has(k)) m.set(k, {}); const p = m.get(k); p[r.level] = (p[r.level] || 0) + valFn(r); } return m; };
+
+/* ───────────────────────── render ───────────────────────── */
+function update() {
+  const all = classify(), view = sortRows(applyFilters(all));
+  // control de consistencia: sin what-if, el cálculo del navegador debe coincidir con la vista SQL
+  const mism = !S.custom && all.some((r, i) => r.level !== D.alerts[i].alert_level);
+  $("#warn").innerHTML = mism ? `<div class="warn">Alert levels computed in the browser differ from pi.v_open_case_alerts. Check the thresholds.</div>` : "";
+  $("#caption").innerHTML = `Alerts measured as of <b>${fdate(P.cutoff)}</b> (report cutoff in <code>pi.report_params</code>, not today's date) · synthetic data · snapshot built ${esc(D.generated_at)} from PostgreSQL` + (S.custom ? " · <b>what-if thresholds active</b>" : "");
+  $("#footnote").textContent = "Static snapshot: filters, sorting and what-if run in your browser. To refresh from the database, re-run python/03_build_dashboard.py.";
+
+  if (!view.length) {
+    $("#kpis").innerHTML = ""; for (const t of ["queue", "map", "owners", "method"]) $("#tab-" + t).innerHTML = "";
+    $("#tab-queue").innerHTML = `<div class="card">No open cases match the current filters.</div>`; showTab(); return;
+  }
+  const flagged = view.filter(r => r.flagged), mix = l => view.filter(r => r.level === l).length;
+  $("#kpis").innerHTML = [
+    ["Open cases", view.length, view.length !== all.length ? `of ${all.length} total` : ""],
+    ["Money at stake", usd(sum(view, r => r.money_at_stake)), ""],
+    ["Flagged cases", flagged.length, `${pct0(flagged.length / view.length)} of shown`],
+    ["Flagged money", usd(sum(flagged, r => r.money_at_stake)), ""],
+    [`${dot("RED")}Red · ${dot("AMBER")}Amber · ${dot("WATCH")}Watch`, `${mix("RED")} · ${mix("AMBER")} · ${mix("WATCH")}`, ""]
+  ].map(([l, v, s]) => `<div class="card kpi"><div class="label">${l}</div><div class="value">${v}</div>${s ? `<span class="sub">${s}</span>` : ""}</div>`).join("");
+
+  if (!view.some(r => r.case_id === S.selected)) S.selected = (view.find(r => r.flagged) || view[0]).case_id;
+  renderQueue(view); renderMap(view); renderOwners(view); renderMethod(all); showTab();
+}
+
+function renderQueue(view) {
+  const maxPct = Math.max(150, Math.ceil(Math.max(...view.map(r => r.pct)) / 10) * 10);
+  const rows = view.map(r => `<tr tabindex="0" data-id="${esc(r.case_id)}" class="${r.case_id === S.selected ? "sel" : ""}">
+    <td>${dot(r.level)}${r.level}</td><td>${esc(r.case_id)}</td><td>${esc(r.phase_name)}</td>
+    <td class="n">${r.days_in_current_phase}</td><td class="n">${r.thr.toFixed(0)}</td>
+    <td class="n"><span class="bar"><i style="width:${Math.min(100, r.pct / maxPct * 100)}%"></i></span>${Math.round(r.pct)}%</td>
+    <td class="n">${usd(r.money_at_stake)}</td><td>${esc(r.case_manager)}</td><td>${esc(r.insurance_company)}</td>
+    <td class="n">${r.over.toFixed(0)}</td><td>${esc(r.injury_type)}</td><td>${esc(r.case_stage)}</td>
+    <td>${r.amount_basis === "Actual settlement" ? "Accepted" : "Estimated"}</td></tr>`).join("");
+  const c = view.find(r => r.case_id === S.selected), det = D.detail[c.case_id];
+  const m = D.managers.find(x => x.case_manager === c.case_manager), k = D.carriers.find(x => x.insurance_company === c.insurance_company);
+  const fee = c.firm_fee_at_stake / c.money_at_stake;
+  $("#tab-queue").innerHTML = `
+    <div class="tablewrap"><table><thead><tr><th>Alert</th><th>Case</th><th>Current phase</th><th class="n">Days</th><th class="n">Limit (d)</th><th>% of limit</th>
+      <th class="n">At stake</th><th>Manager</th><th>Carrier</th><th class="n">Over by (d)</th><th>Injury</th><th>Stage</th><th>Amount</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="toolbar"><span class="muted small">Click a row to inspect that case below (by default: the first flagged case). “Estimated” amounts come from similar closed cases.</span>
+      <button class="btn" id="export">⬇ Export CSV</button></div>
+    <div class="detail"><h2>${dot(c.level)}${esc(c.case_id)} · ${esc(c.phase_name)}</h2>
+      <div class="detail-grid">
+        <div>
+          <div class="metric"><div class="label">Money at stake</div><div class="value">${usd(c.money_at_stake)}</div><span class="chip">${c.amount_basis === "Actual settlement" ? "accepted settlement" : "estimated"}</span></div>
+          <div class="metric"><div class="label">Firm fee at stake</div><div class="value">${usd(c.firm_fee_at_stake)}</div><span class="chip">${pct0(fee)} fee · ${esc(c.case_stage)}</span></div>
+          <div class="metric"><div class="label">Days open</div><div class="value">${c.days_open}</div><span class="chip">since ${fdate(c.intake_date)}</span></div>
+        </div>
+        <div>
+          <div class="metric"><div class="label">Days in current phase</div><div class="value">${c.days_in_current_phase}</div><span class="chip">${pct0(c.pct / 100)} of ${c.thr.toFixed(0)} d threshold</span></div>
+          <p><b>Manager:</b> ${esc(c.case_manager)}<br><span class="muted small">${m ? `Controllable median ${m.median_controllable_days.toFixed(0)} d (${spct(m.controllable_vs_firm_pct)} vs firm) · ${esc(m.performance_flag)}` : ""}</span></p>
+          <p><b>Carrier:</b> ${esc(c.insurance_company)}<br><span class="muted small">${k ? `Offer wait ${k.median_offer_wait_days.toFixed(0)} d (${esc(k.offer_wait_flag)}) · check wait ${k.median_check_wait_days.toFixed(0)} d (${esc(k.check_wait_flag)})${k.sample_flag === "Low sample" ? " · low sample" : ""}` : ""}</span></p>
+        </div>
+        <div class="chartcol">${phaseChart(c, det)}</div>
+      </div>
+      <div class="callout ${lcls(c.level)}"><b>Next action (${c.level}):</b> ${esc(ACTIONS[c.current_phase])}</div></div>`;
+  $("#export").onclick = () => exportCsv(view);
+}
+
+function renderMap(view) {
+  const phaseCats = groupLevels(view, r => r.phase_name, r => 1), phaseMoney = groupLevels(view, r => r.phase_name, r => r.money_at_stake);
+  const cats = m => PNAMES.map(n => ({ label: n, parts: m.get(n) || {} }));
+  $("#tab-map").innerHTML = `<p><b>Where is the money, and how close is each case to its alert threshold?</b> Cases to the right of a dashed line have crossed that alert level; bigger bubbles = more money. Click a bubble to open the case.</p>
+    <div class="card">${riskMap(view)}</div>
+    <div class="two"><div><h3>Open cases by current phase</h3>${stacked(cats(phaseCats), "n")}</div>
+      <div><h3>Money at stake by current phase</h3>${stacked(cats(phaseMoney), "$")}</div></div>`;
+}
+
+function ownerTable(view, keyFn, extraHead, extraCells) {
+  const names = [...new Set(view.map(keyFn))].sort();
+  const body = names.map(n => {
+    const rs = view.filter(r => keyFn(r) === n), fl = rs.filter(r => r.flagged), cnt = l => rs.filter(r => r.level === l).length;
+    return `<tr><td>${esc(n)}</td><td class="n">${rs.length}</td><td class="n">${usd2(sum(rs, r => r.money_at_stake))}</td>
+      <td class="n">${cnt("RED")}</td><td class="n">${cnt("AMBER")}</td><td class="n">${cnt("WATCH")}</td><td class="n">${usd2(sum(fl, r => r.money_at_stake))}</td>${extraCells(n)}</tr>`;
+  }).join("");
+  return `<div class="tablewrap" style="max-height:none"><table class="static"><thead><tr><th>Name</th><th class="n">Open</th><th class="n">At stake</th>
+    <th class="n">${dot("RED")}</th><th class="n">${dot("AMBER")}</th><th class="n">${dot("WATCH")}</th><th class="n">Flagged $</th>${extraHead}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+function renderOwners(view) {
+  const ownerChart = keyFn => { const g = groupLevels(view, keyFn, () => 1); const c = [...g.entries()].map(([label, parts]) => ({ label, parts })); c.sort((a, b) => sum(LEVELS, l => b.parts[l] || 0) - sum(LEVELS, l => a.parts[l] || 0)); return stacked(c, "n"); };
+  const mCells = n => { const m = D.managers.find(x => x.case_manager === n); return m ? `<td class="n">${m.closed_cases}</td><td class="n">${m.median_controllable_days.toFixed(1)}</td><td class="n">${spct(m.controllable_vs_firm_pct)}</td><td>${shortFlag(m.performance_flag)}</td><td>${esc(m.sample_flag)}</td>` : "<td></td>".repeat(5); };
+  const cCells = n => { const c = D.carriers.find(x => x.insurance_company === n); return c ? `<td class="n">${c.closed_cases}</td><td class="n">${c.median_offer_wait_days.toFixed(1)}</td><td>${shortFlag(c.offer_wait_flag)}</td><td class="n">${c.median_check_wait_days.toFixed(1)}</td><td>${shortFlag(c.check_wait_flag)}</td><td>${esc(c.sample_flag)}</td>` : "<td></td>".repeat(6); };
+  $("#tab-owners").innerHTML = `<p class="muted">Open-case load and alerts per owner, next to each owner's <b>closed-case</b> scorecard. Scorecards describe the past and are not adjusted for case mix: read low-sample flags with caution.</p>
+    <h3>Case managers</h3>${ownerTable(view, r => r.case_manager, "<th class='n'>Closed n</th><th class='n'>Controllable med. (d)</th><th class='n'>vs firm</th><th>Scorecard</th><th>Sample</th>", mCells)}
+    <div class="card" style="margin-top:12px">${ownerChart(r => r.case_manager)}</div>
+    <h3>Insurance carriers</h3>${ownerTable(view, r => r.insurance_company, "<th class='n'>Closed n</th><th class='n'>Offer wait med. (d)</th><th>Offer flag</th><th class='n'>Check wait med. (d)</th><th>Check flag</th><th>Sample</th>", cCells)}
+    <div class="card" style="margin-top:12px">${ownerChart(r => r.insurance_company)}</div>
+    <div class="legend" style="margin-top:8px">${LEVELS.map(l => `<span style="--c:${LCOLOR[l]}">${l}</span>`).join("")}</div>`;
+}
+
+function renderMethod(all) {
+  const watch = S.custom ? S.watch / 100 : P.watch, red = S.custom ? S.red : P.red, scale = S.custom ? S.scale / 100 : 1;
+  const thr = new Map(); all.forEach(r => thr.set(r.current_phase, r.thr));
+  const nActual = D.alerts.filter(a => a.amount_basis === "Actual settlement").length;
+  $("#tab-method").innerHTML = `<h2>How an alert is calculated</h2>
+    <p>Each open case sits in exactly one of the 9 phases, deduced from which milestones are still empty (NULL). The days it has spent in that phase are compared with that phase's threshold:</p>
+    <div class="tablewrap" style="max-height:none;max-width:560px"><table class="static"><thead><tr><th>Level</th><th>Rule</th><th>Current value</th></tr></thead><tbody>
+      <tr><td>${dot("WATCH")}WATCH</td><td>days ≥ WATCH % × threshold</td><td>${pct0(watch)}</td></tr>
+      <tr><td>${dot("AMBER")}AMBER</td><td>days &gt; threshold</td><td>${pct0(scale)} of stored thresholds</td></tr>
+      <tr><td>${dot("RED")}RED</td><td>days &gt; threshold × multiplier</td><td>${(+red).toFixed(1)}×</td></tr></tbody></table></div>
+    <p>Thresholds, the multiplier and the cutoff date live in the <code>pi.report_params</code> table, not in the code. With the what-if switch off, this page shows exactly what <code>pi.v_open_case_alerts</code> returns.</p>
+    <p><b>Money at stake:</b> the accepted settlement when there is one (${nActual} of the ${D.alerts.length} open cases); otherwise an estimate from similar closed cases (injury type), which is why those amounts are labeled <i>Estimated</i>.</p>
+    <p><b>Caveats:</b> all data is synthetic; scorecards use few cases per owner and are not adjusted for case mix; thresholds are initial values near the 75th percentile of closed-case phase durations. See the project README.</p>
+    <h3>Thresholds in use (phases with open cases)</h3>
+    <div class="tablewrap" style="max-height:none;max-width:360px"><table class="static"><thead><tr><th>Phase</th><th class="n">Threshold (days)</th></tr></thead><tbody>
+      ${PHASES.filter(p => thr.has(p[0])).map(p => `<tr><td>${p[1]}</td><td class="n">${thr.get(p[0]).toFixed(0)}</td></tr>`).join("")}</tbody></table></div>`;
+}
+
+/* ───────────────────────── pestañas, exportación, tooltips ───────────────────────── */
+const TABS = [["queue", "🚨 Alert queue"], ["map", "🗺️ Risk map"], ["owners", "👥 Owners"], ["method", "ℹ️ Method"]];
+function buildTabs() {
+  $("#tabs").innerHTML = TABS.map(([k, l]) => `<button role="tab" data-tab="${k}">${l}</button>`).join("");
+  $("#tabs").addEventListener("click", e => { const b = e.target.closest("button[data-tab]"); if (b) { S.tab = b.dataset.tab; showTab(); } });
+}
+function showTab() {
+  for (const [k] of TABS) { $("#tab-" + k).hidden = k !== S.tab; }
+  document.querySelectorAll("#tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === S.tab)));
+}
+function exportCsv(view) {
+  const cols = [["case_id", r => r.case_id], ["alert_level", r => r.level], ["case_manager", r => r.case_manager], ["insurance_company", r => r.insurance_company],
+    ["injury_type", r => r.injury_type], ["case_stage", r => r.case_stage], ["phase_name", r => r.phase_name], ["days_in_current_phase", r => r.days_in_current_phase],
+    ["threshold_used", r => r.thr], ["days_over", r => r.over], ["money_at_stake", r => r.money_at_stake], ["amount_basis", r => r.amount_basis],
+    ["firm_fee_at_stake", r => r.firm_fee_at_stake], ["intake_date", r => r.intake_date], ["phase_start_date", r => r.phase_start_date]];
+  const q = v => { const s = String(v ?? ""); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const csv = [cols.map(c => c[0]).join(","), ...view.map(r => cols.map(c => q(c[1](r))).join(","))].join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  a.download = "pi_open_case_alerts.csv"; document.body.appendChild(a); a.click(); a.remove();
+}
+document.addEventListener("click", e => {
+  const circle = e.target.closest("circle[data-id]"), tr = e.target.closest("#tab-queue tbody tr[data-id]");
+  const id = circle ? circle.dataset.id : tr ? tr.dataset.id : null;
+  if (id) { S.selected = id; S.tab = "queue"; update(); if (circle) $(".detail").scrollIntoView({ behavior: "smooth" }); }
+});
+document.addEventListener("keydown", e => { const tr = e.target.closest("#tab-queue tbody tr[data-id]"); if (tr && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); S.selected = tr.dataset.id; update(); } });
+const tip = $("#tooltip");
+document.addEventListener("mousemove", e => {
+  const t = e.target.closest ? e.target.closest("[data-tip]") : null;
+  if (!t) { tip.style.opacity = 0; return; }
+  tip.innerHTML = t.getAttribute("data-tip").split("\n").map(esc).join("<br>"); tip.style.opacity = 1;
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = Math.min(e.clientX + 14, window.innerWidth - w - 8) + "px";
+  tip.style.top = Math.min(e.clientY + 14, window.innerHeight - h - 8) + "px";
+});
+
+buildSidebar(); buildTabs(); syncSidebar(); update();
+})();
+</script>
+</body>
+</html>

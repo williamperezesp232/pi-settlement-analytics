@@ -1,0 +1,9 @@
+# Configuración de Streamlit para la demo (se aplica al ejecutar `streamlit run app.py` desde la raíz)
+[browser]
+gatherUsageStats = false      # sin telemetría
+
+[server]
+showEmailPrompt = false       # evita la pregunta de e-mail la primera vez que se ejecuta
+
+[client]
+toolbarMode = "viewer"        # oculta el botón "Deploy" y el menú de desarrollador durante la demo

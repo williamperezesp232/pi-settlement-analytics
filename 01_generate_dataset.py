@@ -92,6 +92,9 @@ PHASE_KEYS = [p[0] for p in PHASES]
 OPEN_STAGE_PLAN = [11, 4, 3, 5, 5, 3, 2, 2, 1]
 assert sum(OPEN_STAGE_PLAN) == N_OPEN
 
+# Candidatos por caso abierto para el muestreo sesgado por duración (ver generate_dataset).
+N_OPEN_CANDIDATES = 80
+
 DATE_COLS = [
     "intake_date",
     "treatment_completion_date",
@@ -408,16 +411,24 @@ def generate_dataset(seed: int = SEED) -> pd.DataFrame:
         intake = EARLIEST_INTAKE + timedelta(days=int(rng.integers(0, span + 1)))
         rows.append(materialize(case, intake, is_open=False))
 
-    # ── Casos ABIERTOS: el corte cae DENTRO de la fase planeada (fase actual conocida)
+    # ── Casos ABIERTOS: el corte cae DENTRO de la fase planeada (fase actual conocida).
+    #    MUESTREO SESGADO POR DURACIÓN (paradoja de la inspección): en una foto del
+    #    inventario, la probabilidad de encontrar un caso en una fase es proporcional a
+    #    cuánto dura esa fase en ese caso. Los casos con una fase larga (expediente perdido,
+    #    cheque extraviado, cliente ilocalizable) están sobrerrepresentados, tal como en una
+    #    cartera real. Se logra eligiendo entre N candidatos con peso = duración en la fase.
+    #    (Los casos CERRADOS no cambian: se generan antes con la misma secuencia aleatoria.)
     stage_list = [i for i, n in enumerate(OPEN_STAGE_PLAN) for _ in range(n)]
     rng.shuffle(stage_list)
     for stage_idx in stage_list:
         while True:
-            case = draw_case(rng, None, None, managers)
-            bounds = np.cumsum([0] + case["phase_days"])
-            start, end = int(bounds[stage_idx]), int(bounds[stage_idx + 1])
-            if end > start:                              # la fase debe durar >= 1 día
+            candidates = [draw_case(rng, None, None, managers) for _ in range(N_OPEN_CANDIDATES)]
+            weights = np.array([c["phase_days"][stage_idx] for c in candidates], dtype=float)
+            if weights.sum() > 0:                        # al menos un candidato con fase >= 1 día
                 break
+        case = candidates[int(rng.choice(len(candidates), p=weights / weights.sum()))]
+        bounds = np.cumsum([0] + case["phase_days"])
+        start, end = int(bounds[stage_idx]), int(bounds[stage_idx + 1])
         offset_today = int(rng.integers(start, end))     # día de hoy dentro de la fase
         intake = CUTOFF_DATE - timedelta(days=offset_today)
         rows.append(materialize(case, intake, is_open=True))
