@@ -292,7 +292,7 @@ Legal operations process modeling (critical path, controllable vs external time)
 
 ## About
 
-**[Your Name]** — 4 years in plaintiff-side Personal Injury operations (case management, settlement coordination, legal operations).
+**William Perez** — 4 years in plaintiff-side Personal Injury operations (case management, settlement coordination, legal operations).
 [LinkedIn](www.linkedin.com/in/williamperez232) · [Email](mailto:williamperezesp232@gmmail.com)
 
 *This project uses no real client data and is for demonstration purposes only.*
